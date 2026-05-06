@@ -25,7 +25,7 @@ function App() {
 function Inicio({ setPantalla }) {
   return (
     <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h1>🎉 EventOS</h1>
+      <h1>🎉 eventOS</h1>
       <p>Plataforma de gestión de eventos</p>
       <br />
       <button onClick={() => setPantalla("login")}
