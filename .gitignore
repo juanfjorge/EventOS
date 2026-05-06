@@ -1,0 +1,3 @@
+backend/venv/
+backend/eventos.db
+frontend/node_modules/
