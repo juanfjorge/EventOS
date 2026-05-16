@@ -268,6 +268,47 @@ def generar_qr(codigo):
     return jsonify({'imagen': f'data:image/png;base64,{img_base64}'})
 
 
+# ========================
+# ESTADISTICAS
+# ========================
+
+@app.route('/estadisticas/<int:evento_id>', methods=['GET'])
+def estadisticas(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+    entradas = TipoEntrada.query.filter_by(evento_id=evento_id).all()
+    
+    total_compras = 0
+    total_recaudado = 0
+    total_accesos = 0
+    detalle = []
+
+    for entrada in entradas:
+        compras = Compra.query.filter_by(tipo_entrada_id=entrada.id).all()
+        cantidad = len(compras)
+        accesos = sum(1 for c in compras if c.qr_usado)
+        recaudado = cantidad * entrada.precio
+        
+        total_compras += cantidad
+        total_recaudado += recaudado
+        total_accesos += accesos
+
+        detalle.append({
+            'tipo': entrada.nombre,
+            'precio': entrada.precio,
+            'cupos': entrada.cupos,
+            'vendidas': cantidad,
+            'accesos': accesos,
+            'recaudado': recaudado
+        })
+
+    return jsonify({
+        'evento': evento.nombre,
+        'total_compras': total_compras,
+        'total_recaudado': total_recaudado,
+        'total_accesos': total_accesos,
+        'detalle': detalle
+    }), 200
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
