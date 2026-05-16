@@ -16,9 +16,16 @@ function App() {
       {pantalla === "comprar" && (
         <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={setPantalla} />
       )}
-      {pantalla === "admin" && (
-        <Admin usuario={usuario} setPantalla={setPantalla} />
-      )}
+{pantalla === "admin" && (
+  <Admin usuario={usuario} setPantalla={setPantalla} setEventoSeleccionado={setEventoSeleccionado} />
+)}
+{pantalla === "estadisticas" && (
+  <Estadisticas evento={eventoSeleccionado} setPantalla={setPantalla} />
+)}
+{pantalla === "validar" && (
+  <ValidarQR setPantalla={setPantalla} />
+)}
+
     </div>
   );
 }
@@ -133,16 +140,14 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
       <h3>Eventos disponibles</h3>
       {eventos.length === 0 && <p>No hay eventos disponibles.</p>}
       {eventos.map(e => (
-        <div key={e.id} style={cardStyle}>
-          <h4>{e.nombre}</h4>
-          <p>📅 {e.fecha}</p>
-          <p>📍 {e.lugar}</p>
-          <p>👥 Capacidad: {e.capacidad}</p>
-          <p>{e.descripcion}</p>
-          <button onClick={() => { setEventoSeleccionado(e); setPantalla("comprar"); }}
-            style={btnStyle("#048A81")}>Ver entradas</button>
-        </div>
-      ))}
+  <div key={e.id} style={cardStyle}>
+    <h4>{e.nombre}</h4>
+    <p>📅 {e.fecha} — 📍 {e.lugar}</p>
+    <p>👥 Capacidad: {e.capacidad}</p>
+    <button onClick={() => { setEventoSeleccionado(e); setPantalla("estadisticas"); }}
+      style={btnStyle("#8e44ad")}>📊 Ver estadísticas</button>
+  </div>
+))}
       <br />
       <button onClick={() => setPantalla("inicio")} style={btnStyle("#aaa")}>Cerrar sesión</button>
     </div>
@@ -288,8 +293,9 @@ function Admin({ usuario, setPantalla }) {
       ))}
 
       <br />
-      <button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>
-    </div>
+      <button onClick={() => setPantalla("validar")} style={btnStyle("#c0392b")}>🔍 Validar QR en puerta</button>
+<br /><br />
+<button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>    </div>
   );
 }
 
@@ -329,6 +335,94 @@ function QRImagen({ codigo }) {
         : <p>Cargando QR...</p>
       }
       <p style={{ fontSize: "11px", color: "#888", wordBreak: "break-all" }}>{codigo}</p>
+    </div>
+  );
+}
+
+
+function Estadisticas({ evento, setPantalla }) {
+  const [stats, setStats] = useState(null);
+
+  const cargarStats = async () => {
+    const res = await fetch(`http://127.0.0.1:5000/estadisticas/${evento.id}`);
+    const data = await res.json();
+    setStats(data);
+  };
+
+  if (!stats) cargarStats();
+
+  return (
+    <div>
+      <h2>📊 Estadísticas</h2>
+      <h3>{evento.nombre}</h3>
+      {stats ? (
+        <div>
+          <div style={cardStyle}>
+            <p>🎟️ <strong>Total vendidas:</strong> {stats.total_compras}</p>
+            <p>💰 <strong>Total recaudado:</strong> ${stats.total_recaudado}</p>
+            <p>✅ <strong>Accesos validados:</strong> {stats.total_accesos}</p>
+          </div>
+          <h3>Detalle por tipo</h3>
+          {stats.detalle.map((d, i) => (
+            <div key={i} style={cardStyle}>
+              <h4>{d.tipo}</h4>
+              <p>💰 Precio: ${d.precio}</p>
+              <p>🎟️ Vendidas: {d.vendidas} / {d.cupos}</p>
+              <p>✅ Accesos: {d.accesos}</p>
+              <p>💵 Recaudado: ${d.recaudado}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p>Cargando estadísticas...</p>
+      )}
+      <br />
+      <button onClick={() => setPantalla("admin")} style={btnStyle("#aaa")}>Volver</button>
+    </div>
+  );
+}
+
+function ValidarQR({ setPantalla }) {
+  const [codigo, setCodigo] = useState("");
+  const [resultado, setResultado] = useState(null);
+
+  const validar = async () => {
+    const res = await fetch("http://127.0.0.1:5000/validar-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qr_codigo: codigo })
+    });
+    const data = await res.json();
+    setResultado({ ok: res.ok, mensaje: data.mensaje || data.error });
+  };
+
+  return (
+    <div>
+      <h2>🔍 Validar QR en puerta</h2>
+      <p>Ingresá el código QR del asistente:</p>
+      <input
+        placeholder="Código QR"
+        style={inputStyle}
+        onChange={e => setCodigo(e.target.value)}
+      />
+      <button onClick={validar} style={btnStyle("#2E4057")}>Validar</button>
+
+      {resultado && (
+        <div style={{
+          marginTop: "20px",
+          padding: "20px",
+          borderRadius: "8px",
+          textAlign: "center",
+          backgroundColor: resultado.ok ? "#d4edda" : "#f8d7da",
+          color: resultado.ok ? "#155724" : "#721c24"
+        }}>
+          <h2>{resultado.ok ? "✅" : "❌"}</h2>
+          <p><strong>{resultado.mensaje}</strong></p>
+        </div>
+      )}
+
+      <br />
+      <button onClick={() => setPantalla("admin")} style={btnStyle("#aaa")}>Volver</button>
     </div>
   );
 }
