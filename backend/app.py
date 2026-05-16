@@ -253,6 +253,21 @@ def validar_qr():
 
     return jsonify({'mensaje': 'Acceso permitido ✓', 'compra_id': compra.id}), 200
 
+# Generar imagen qr
+import io
+import base64
+
+@app.route('/qr/<codigo>', methods=['GET'])
+def generar_qr(codigo):
+    import qrcode
+    qr = qrcode.make(codigo)
+    buffer = io.BytesIO()
+    qr.save(buffer, format='PNG')
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    return jsonify({'imagen': f'data:image/png;base64,{img_base64}'})
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
