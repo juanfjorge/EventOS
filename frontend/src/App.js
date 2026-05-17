@@ -1,40 +1,49 @@
 import { useState } from "react";
+import { Bar } from "react-chartjs-2";
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 function App() {
   const [pantalla, setPantalla] = useState("inicio");
   const [usuario, setUsuario] = useState(null);
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
 
+  const irA = (destino) => {
+    if (destino === "admin" && usuario?.rol !== "admin") return;
+    if (destino === "estadisticas" && usuario?.rol !== "admin") return;
+    if (destino === "validar" && usuario?.rol !== "admin") return;
+    setPantalla(destino);
+  };
+
   return (
-    <div style={{ fontFamily: "Arial", maxWidth: "500px", margin: "0 auto", padding: "20px" }}>
-      {pantalla === "inicio" && <Inicio setPantalla={setPantalla} />}
-      {pantalla === "registro" && <Registro setPantalla={setPantalla} />}
-      {pantalla === "login" && <Login setPantalla={setPantalla} setUsuario={setUsuario} />}
+    <div style={{ fontFamily: "Arial", maxWidth: "480px", margin: "0 auto", padding: "20px", boxSizing: "border-box" }}>
+      {pantalla === "inicio" && <Inicio setPantalla={irA} />}
+      {pantalla === "registro" && <Registro setPantalla={irA} />}
+      {pantalla === "login" && <Login setPantalla={irA} setUsuario={setUsuario} />}
       {pantalla === "eventos" && (
-        <Eventos usuario={usuario} setPantalla={setPantalla} setEventoSeleccionado={setEventoSeleccionado} />
+        <Eventos usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
       )}
       {pantalla === "comprar" && (
-        <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={setPantalla} />
+        <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} />
       )}
-{pantalla === "admin" && (
-  <Admin usuario={usuario} setPantalla={setPantalla} setEventoSeleccionado={setEventoSeleccionado} />
-)}
-{pantalla === "estadisticas" && (
-  <Estadisticas evento={eventoSeleccionado} setPantalla={setPantalla} />
-)}
-{pantalla === "validar" && (
-  <ValidarQR setPantalla={setPantalla} />
-)}
-
+      {pantalla === "admin" && (
+        <Admin usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
+      )}
+      {pantalla === "estadisticas" && (
+        <Estadisticas evento={eventoSeleccionado} setPantalla={irA} />
+      )}
+      {pantalla === "validar" && (
+        <ValidarQR setPantalla={irA} />
+      )}
     </div>
   );
 }
 
 function Inicio({ setPantalla }) {
   return (
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h1>🎉 EventOS</h1>
-      <p>Plataforma de gestión de eventos</p>
+    <div style={{ textAlign: "center", marginTop: "80px" }}>
+      <h1 style={{ fontSize: "2.5em" }}>🎉 EventOS</h1>
+      <p style={{ color: "#666" }}>Plataforma de gestión de eventos</p>
       <br />
       <button onClick={() => setPantalla("login")} style={btnStyle("#2E4057")}>Iniciar sesión</button>
       <br /><br />
@@ -127,27 +136,31 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
 
   return (
     <div>
-      <h2>Bienvenido, {usuario?.nombre} 👋</h2>
-      <p>Rol: {usuario?.rol}</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h2>Hola, {usuario?.nombre} 👋</h2>
+        <span style={{ backgroundColor: usuario?.rol === "admin" ? "#e67e22" : "#048A81", color: "white", padding: "4px 10px", borderRadius: "12px", fontSize: "12px" }}>
+          {usuario?.rol}
+        </span>
+      </div>
 
       {usuario?.rol === "admin" && (
-        <button onClick={() => setPantalla("admin")} style={btnStyle("#e67e22")}>
-          ⚙️ Panel de Administrador
-        </button>
+        <button onClick={() => setPantalla("admin")} style={btnStyle("#e67e22")}>⚙️ Panel de Administrador</button>
       )}
 
       <br /><br />
       <h3>Eventos disponibles</h3>
       {eventos.length === 0 && <p>No hay eventos disponibles.</p>}
       {eventos.map(e => (
-  <div key={e.id} style={cardStyle}>
-    <h4>{e.nombre}</h4>
-    <p>📅 {e.fecha} — 📍 {e.lugar}</p>
-    <p>👥 Capacidad: {e.capacidad}</p>
-    <button onClick={() => { setEventoSeleccionado(e); setPantalla("estadisticas"); }}
-      style={btnStyle("#8e44ad")}>📊 Ver estadísticas</button>
-  </div>
-))}
+        <div key={e.id} style={cardStyle}>
+          <h4 style={{ margin: "0 0 8px 0" }}>{e.nombre}</h4>
+          <p style={pStyle}>📅 {e.fecha}</p>
+          <p style={pStyle}>📍 {e.lugar}</p>
+          <p style={pStyle}>👥 Capacidad: {e.capacidad}</p>
+          <p style={pStyle}>{e.descripcion}</p>
+          <button onClick={() => { setEventoSeleccionado(e); setPantalla("comprar"); }}
+            style={btnStyle("#048A81")}>🎟️ Ver entradas</button>
+        </div>
+      ))}
       <br />
       <button onClick={() => setPantalla("inicio")} style={btnStyle("#aaa")}>Cerrar sesión</button>
     </div>
@@ -187,25 +200,48 @@ function Comprar({ usuario, evento, setPantalla }) {
   return (
     <div>
       <h2>{evento.nombre}</h2>
-      <p>📅 {evento.fecha} — 📍 {evento.lugar}</p>
+      <p style={pStyle}>📅 {evento.fecha} — 📍 {evento.lugar}</p>
       <h3>Tipos de entrada</h3>
       {entradas.map(e => (
         <div key={e.id} style={cardStyle}>
-          <h4>{e.nombre}</h4>
-          <p>💰 ${e.precio}</p>
-          <p>🎟️ Cupos disponibles: {e.cupos}</p>
+          <h4 style={{ margin: "0 0 8px 0" }}>{e.nombre}</h4>
+          <p style={pStyle}>💰 ${e.precio}</p>
+          <p style={pStyle}>🎟️ Cupos disponibles: {e.cupos}</p>
           <button onClick={() => comprar(e.id)} style={btnStyle("#2E4057")}>Comprar</button>
         </div>
       ))}
       {mensaje && <p>{mensaje}</p>}
-      {qr && <QRImagen codigo={qr} />} #muestra la imagen del qr
+      {qr && <QRImagen codigo={qr} />}
       <br />
       <button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>
     </div>
   );
 }
 
-function Admin({ usuario, setPantalla }) {
+function QRImagen({ codigo }) {
+  const [imagen, setImagen] = useState(null);
+
+  const cargarQR = async () => {
+    const res = await fetch(`http://127.0.0.1:5000/qr/${codigo}`);
+    const data = await res.json();
+    setImagen(data.imagen);
+  };
+
+  if (!imagen) cargarQR();
+
+  return (
+    <div style={{ marginTop: "20px", padding: "15px", backgroundColor: "#f0f0f0", borderRadius: "8px", textAlign: "center" }}>
+      <p><strong>Tu código QR:</strong></p>
+      {imagen
+        ? <img src={imagen} alt="QR" style={{ width: "200px", height: "200px" }} />
+        : <p>Cargando QR...</p>
+      }
+      <p style={{ fontSize: "11px", color: "#888", wordBreak: "break-all" }}>{codigo}</p>
+    </div>
+  );
+}
+
+function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   const [eventos, setEventos] = useState([]);
   const [cargado, setCargado] = useState(false);
   const [formEvento, setFormEvento] = useState({ nombre: "", fecha: "", lugar: "", capacidad: "", descripcion: "" });
@@ -228,13 +264,18 @@ function Admin({ usuario, setPantalla }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...formEvento, capacidad: parseInt(formEvento.capacidad) })
     });
-    const data = await res.json();
     if (res.ok) {
       setMensajeEvento("✅ Evento creado correctamente");
       setCargado(false);
     } else {
       setMensajeEvento("❌ Error al crear evento");
     }
+  };
+
+  const eliminarEvento = async (id) => {
+    if (!window.confirm("¿Seguro que querés eliminar este evento?")) return;
+    const res = await fetch(`http://127.0.0.1:5000/eventos/${id}`, { method: "DELETE" });
+    if (res.ok) setCargado(false);
   };
 
   const crearEntrada = async () => {
@@ -286,55 +327,22 @@ function Admin({ usuario, setPantalla }) {
       <h3>Eventos creados</h3>
       {eventos.map(e => (
         <div key={e.id} style={cardStyle}>
-          <h4>{e.nombre}</h4>
-          <p>📅 {e.fecha} — 📍 {e.lugar}</p>
-          <p>👥 Capacidad: {e.capacidad}</p>
+          <h4 style={{ margin: "0 0 8px 0" }}>{e.nombre}</h4>
+          <p style={pStyle}>📅 {e.fecha} — 📍 {e.lugar}</p>
+          <p style={pStyle}>👥 Capacidad: {e.capacidad}</p>
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            <button onClick={() => { setEventoSeleccionado(e); setPantalla("estadisticas"); }}
+              style={{ ...btnStyle("#8e44ad"), width: "auto", padding: "8px 12px" }}>📊 Estadísticas</button>
+            <button onClick={() => eliminarEvento(e.id)}
+              style={{ ...btnStyle("#e74c3c"), width: "auto", padding: "8px 12px" }}>🗑️ Eliminar</button>
+          </div>
         </div>
       ))}
 
       <br />
       <button onClick={() => setPantalla("validar")} style={btnStyle("#c0392b")}>🔍 Validar QR en puerta</button>
-<br /><br />
-<button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>    </div>
-  );
-}
-
-const inputStyle = {
-  display: "block", width: "100%", padding: "10px",
-  marginBottom: "10px", fontSize: "16px", borderRadius: "6px",
-  border: "1px solid #ccc", boxSizing: "border-box"
-};
-
-const btnStyle = (color) => ({
-  backgroundColor: color, color: "white", border: "none",
-  padding: "10px 20px", borderRadius: "6px", fontSize: "16px",
-  cursor: "pointer", width: "100%"
-});
-
-const cardStyle = {
-  border: "1px solid #ddd", borderRadius: "8px",
-  padding: "15px", marginBottom: "10px", backgroundColor: "#f9f9f9"
-};
-
-function QRImagen({ codigo }) {
-  const [imagen, setImagen] = useState(null);
-
-  const cargarQR = async () => {
-    const res = await fetch(`http://127.0.0.1:5000/qr/${codigo}`);
-    const data = await res.json();
-    setImagen(data.imagen);
-  };
-
-  if (!imagen) cargarQR();
-
-  return (
-    <div style={{ marginTop: "20px", padding: "15px", backgroundColor: "#f0f0f0", borderRadius: "8px", textAlign: "center" }}>
-      <p><strong>Tu código QR:</strong></p>
-      {imagen
-        ? <img src={imagen} alt="QR" style={{ width: "200px", height: "200px" }} />
-        : <p>Cargando QR...</p>
-      }
-      <p style={{ fontSize: "11px", color: "#888", wordBreak: "break-all" }}>{codigo}</p>
+      <br /><br />
+      <button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>
     </div>
   );
 }
@@ -351,6 +359,13 @@ function Estadisticas({ evento, setPantalla }) {
 
   if (!stats) cargarStats();
 
+  const datosGrafico = stats?.detalle.map(d => ({
+    tipo: d.tipo,
+    Vendidas: d.vendidas,
+    Accesos: d.accesos,
+    Recaudado: d.recaudado
+  }));
+
   return (
     <div>
       <h2>📊 Estadísticas</h2>
@@ -362,14 +377,35 @@ function Estadisticas({ evento, setPantalla }) {
             <p>💰 <strong>Total recaudado:</strong> ${stats.total_recaudado}</p>
             <p>✅ <strong>Accesos validados:</strong> {stats.total_accesos}</p>
           </div>
+
+          <h3>Ventas por tipo de entrada</h3>
+          <Bar
+  data={{
+    labels: stats.detalle.map(d => d.tipo),
+    datasets: [
+      {
+        label: "Vendidas",
+        data: stats.detalle.map(d => d.vendidas),
+        backgroundColor: "#2E4057"
+      },
+      {
+        label: "Accesos",
+        data: stats.detalle.map(d => d.accesos),
+        backgroundColor: "#048A81"
+      }
+    ]
+  }}
+  options={{ responsive: true }}
+/>
+
           <h3>Detalle por tipo</h3>
           {stats.detalle.map((d, i) => (
             <div key={i} style={cardStyle}>
               <h4>{d.tipo}</h4>
-              <p>💰 Precio: ${d.precio}</p>
-              <p>🎟️ Vendidas: {d.vendidas} / {d.cupos}</p>
-              <p>✅ Accesos: {d.accesos}</p>
-              <p>💵 Recaudado: ${d.recaudado}</p>
+              <p style={pStyle}>💰 Precio: ${d.precio}</p>
+              <p style={pStyle}>🎟️ Vendidas: {d.vendidas} / {d.cupos}</p>
+              <p style={pStyle}>✅ Accesos: {d.accesos}</p>
+              <p style={pStyle}>💵 Recaudado: ${d.recaudado}</p>
             </div>
           ))}
         </div>
@@ -426,5 +462,24 @@ function ValidarQR({ setPantalla }) {
     </div>
   );
 }
+
+const inputStyle = {
+  display: "block", width: "100%", padding: "10px",
+  marginBottom: "10px", fontSize: "16px", borderRadius: "6px",
+  border: "1px solid #ccc", boxSizing: "border-box"
+};
+
+const btnStyle = (color) => ({
+  backgroundColor: color, color: "white", border: "none",
+  padding: "10px 20px", borderRadius: "6px", fontSize: "16px",
+  cursor: "pointer", width: "100%"
+});
+
+const pStyle = { margin: "4px 0", fontSize: "14px", color: "#555" };
+
+const cardStyle = {
+  border: "1px solid #ddd", borderRadius: "8px",
+  padding: "15px", marginBottom: "10px", backgroundColor: "#f9f9f9"
+};
 
 export default App;
