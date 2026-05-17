@@ -196,6 +196,19 @@ function Comprar({ usuario, evento, setPantalla }) {
       setMensaje("❌ " + data.error);
     }
   };
+  const pagar = async (tipo_entrada_id) => {
+    const res = await fetch("http://127.0.0.1:5000/crear-pago", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo_entrada_id })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      window.open(data.init_point, "_blank");
+    } else {
+      setMensaje("❌ Error al procesar el pago");
+    }
+  };
 
   return (
     <div>
@@ -207,8 +220,7 @@ function Comprar({ usuario, evento, setPantalla }) {
           <h4 style={{ margin: "0 0 8px 0" }}>{e.nombre}</h4>
           <p style={pStyle}>💰 ${e.precio}</p>
           <p style={pStyle}>🎟️ Cupos disponibles: {e.cupos}</p>
-          <button onClick={() => comprar(e.id)} style={btnStyle("#2E4057")}>Comprar</button>
-        </div>
+          <button onClick={() => pagar(e.id)} style={btnStyle("#2E4057")}>💳 Comprar</button>        </div>
       ))}
       {mensaje && <p>{mensaje}</p>}
       {qr && <QRImagen codigo={qr} />}
@@ -419,29 +431,58 @@ function Estadisticas({ evento, setPantalla }) {
 }
 
 function ValidarQR({ setPantalla }) {
-  const [codigo, setCodigo] = useState("");
   const [resultado, setResultado] = useState(null);
+  const [escaneando, setEscaneando] = useState(false);
+  const [codigo, setCodigo] = useState("");
 
-  const validar = async () => {
+  const iniciarEscaner = () => {
+    setEscaneando(true);
+    const html5QrCode = new window.Html5Qrcode("lector-qr");
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      async (codigoDetectado) => {
+        html5QrCode.stop();
+        setEscaneando(false);
+        await validarCodigo(codigoDetectado);
+      },
+      (error) => {}
+    );
+  };
+
+  const validarCodigo = async (cod) => {
     const res = await fetch("http://127.0.0.1:5000/validar-qr", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ qr_codigo: codigo })
+      body: JSON.stringify({ qr_codigo: cod })
     });
     const data = await res.json();
     setResultado({ ok: res.ok, mensaje: data.mensaje || data.error });
   };
 
+  const validarManual = async () => {
+    await validarCodigo(codigo);
+  };
+
   return (
     <div>
       <h2>🔍 Validar QR en puerta</h2>
-      <p>Ingresá el código QR del asistente:</p>
+
+      <button onClick={iniciarEscaner} style={btnStyle("#2E4057")}>
+        📷 Escanear con cámara
+      </button>
+
+      <br /><br />
+      <div id="lector-qr" style={{ width: "100%" }}></div>
+
+      <hr />
+      <p>O ingresá el código manualmente:</p>
       <input
         placeholder="Código QR"
         style={inputStyle}
         onChange={e => setCodigo(e.target.value)}
       />
-      <button onClick={validar} style={btnStyle("#2E4057")}>Validar</button>
+      <button onClick={validarManual} style={btnStyle("#048A81")}>Validar</button>
 
       {resultado && (
         <div style={{
