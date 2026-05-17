@@ -1,10 +1,13 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import mercadopago
 
-sdk = mercadopago.SDK("APP_USR-5308285004584825-051711-327def3d4a3e54dff95b0470e25af9f4-3406336503")
-
+import os
+sdk = mercadopago.SDK(os.environ.get("MP_ACCESS_TOKEN"))
 app = Flask(__name__)
 CORS(app)
 

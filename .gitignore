@@ -1,3 +1,4 @@
 backend/venv/
 backend/eventos.db
+backend/.env
 frontend/node_modules/
