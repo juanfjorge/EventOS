@@ -1,7 +1,13 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+import mercadopago
 
+import os
+sdk = mercadopago.SDK(os.environ.get("MP_ACCESS_TOKEN"))
 app = Flask(__name__)
 CORS(app)
 
@@ -308,6 +314,41 @@ def estadisticas(evento_id):
         'total_accesos': total_accesos,
         'detalle': detalle
     }), 200
+
+# ========================
+# MERCADOPAGO
+# ========================
+
+@app.route('/crear-pago', methods=['POST'])
+def crear_pago():
+    data = request.get_json()
+
+    tipo_entrada = TipoEntrada.query.get_or_404(data['tipo_entrada_id'])
+    evento = Evento.query.get_or_404(tipo_entrada.evento_id)
+
+    preference_data = {
+        "items": [
+            {
+                "title": f"{evento.nombre} - {tipo_entrada.nombre}",
+                "quantity": 1,
+                "unit_price": float(tipo_entrada.precio)
+            }
+        ]
+    }
+
+    preference_response = sdk.preference().create(preference_data)
+    preference = preference_response["response"]
+
+    print("RESPUESTA MERCADOPAGO:", preference)
+
+    if "init_point" not in preference:
+        return jsonify({"error": "Error de MercadoPago", "detalle": preference}), 500
+
+    return jsonify({
+        "init_point": preference["init_point"],
+        "preference_id": preference["id"]
+    }), 200
+
 
 if __name__ == '__main__':
     with app.app_context():
