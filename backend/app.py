@@ -228,21 +228,24 @@ def crear_pago():
     data = request.get_json()
     tipo_entrada = TipoEntrada.query.get_or_404(data['tipo_entrada_id'])
     evento = Evento.query.get_or_404(tipo_entrada.evento_id)
+
     preference_data = {
-    "items": [{"title": f"{evento.nombre} - {tipo_entrada.nombre}", "quantity": 1, "unit_price": float(tipo_entrada.precio)}],
-    "external_reference": f"{data['usuario_id']}-{data['tipo_entrada_id']}",
-    "back_urls": {
-        "success": "http://localhost:3000",
-        "failure": "http://localhost:3000",
-        "pending": "http://localhost:3000"
-    },
-    "notification_url": "https://eventos-production-24eb.up.railway.app/webhook"
-}
+        "items": [{"title": f"{evento.nombre} - {tipo_entrada.nombre}", "quantity": 1, "unit_price": float(tipo_entrada.precio)}],
+        "external_reference": f"{data['usuario_id']}-{data['tipo_entrada_id']}",
+        "back_urls": {
+            "success": "http://localhost:3000",
+            "failure": "http://localhost:3000",
+            "pending": "http://localhost:3000"
+        },
+        "notification_url": "https://eventos-production-24eb.up.railway.app/webhook"
+    }
 
     preference_response = sdk.preference().create(preference_data)
     preference = preference_response["response"]
+
     if "init_point" not in preference:
         return jsonify({"error": "Error de MercadoPago", "detalle": preference}), 500
+
     return jsonify({"init_point": preference["init_point"], "preference_id": preference["id"]}), 200
 
 @app.route('/webhook', methods=['POST'])
