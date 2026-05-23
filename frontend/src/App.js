@@ -15,11 +15,8 @@ function App() {
   useEffect(() => {
     useEffect(() => {
       const params = new URLSearchParams(window.location.search);
-      const status = params.get("status");
       console.log("STATUS:", status);
       console.log("URL:", window.location.search);
-      const usuario_id = localStorage.getItem("pendiente_usuario_id");
-      const tipo_entrada_id = localStorage.getItem("pendiente_tipo_entrada_id");
       console.log("USUARIO_ID:", usuario_id);
       console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
     const status = params.get("status");
