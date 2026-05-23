@@ -15,16 +15,15 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("status");
-    const usuario_id = localStorage.getItem("pendiente_usuario_id");
-    const tipo_entrada_id = localStorage.getItem("pendiente_tipo_entrada_id");
+    const usuario_id = params.get("usuario_id");
+    const tipo_entrada_id = params.get("tipo_entrada_id");
 
     console.log("STATUS:", status);
     console.log("USUARIO_ID:", usuario_id);
     console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
 
     if (status === "approved" && usuario_id && tipo_entrada_id) {
-      localStorage.removeItem("pendiente_usuario_id");
-      localStorage.removeItem("pendiente_tipo_entrada_id");
+
 
       fetch(`${API}/compras`, {
         method: "POST",
@@ -220,9 +219,6 @@ function Comprar({ usuario, evento, setPantalla }) {
   if (!cargado) cargarEntradas();
 
   const pagar = async (tipo_entrada_id) => {
-    localStorage.setItem("pendiente_usuario_id", usuario.id);
-    localStorage.setItem("pendiente_tipo_entrada_id", tipo_entrada_id);
-
     const res = await fetch(`${API}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
