@@ -1,14 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+const API = "https://eventos-production-24eb.up.railway.app";
 
 function App() {
   const usuarioGuardado = localStorage.getItem("usuario");
   const [usuario, setUsuario] = useState(usuarioGuardado ? JSON.parse(usuarioGuardado) : null);
   const [pantalla, setPantalla] = useState(usuarioGuardado ? "eventos" : "inicio");
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
+  const [qrFinal, setQrFinal] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    const usuario_id = localStorage.getItem("pendiente_usuario_id");
+    const tipo_entrada_id = localStorage.getItem("pendiente_tipo_entrada_id");
+
+    if (status === "approved" && usuario_id && tipo_entrada_id) {
+      localStorage.removeItem("pendiente_usuario_id");
+      localStorage.removeItem("pendiente_tipo_entrada_id");
+
+      fetch(`${API}/compras`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.qr_codigo) {
+          setQrFinal(data.qr_codigo);
+          setPantalla("compra_exitosa");
+        }
+      });
+    }
+  }, []);
 
   const irA = (destino) => {
     if (destino === "admin" && usuario?.rol !== "admin") return;
@@ -37,6 +64,9 @@ function App() {
       {pantalla === "validar" && (
         <ValidarQR setPantalla={irA} />
       )}
+      {pantalla === "compra_exitosa" && (
+        <CompraExitosa qr={qrFinal} setPantalla={irA} />
+      )}
     </div>
   );
 }
@@ -59,7 +89,7 @@ function Registro({ setPantalla }) {
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async () => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/registro", {
+    const res = await fetch(`${API}/registro`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
@@ -96,7 +126,7 @@ function Login({ setPantalla, setUsuario }) {
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async () => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/login", {
+    const res = await fetch(`${API}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
@@ -106,7 +136,6 @@ function Login({ setPantalla, setUsuario }) {
       setUsuario(data.usuario);
       localStorage.setItem("usuario", JSON.stringify(data.usuario));
       setPantalla("eventos");
-    
     } else {
       setMensaje("❌ " + data.error);
     }
@@ -130,7 +159,7 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
   const [cargado, setCargado] = useState(false);
 
   const cargarEventos = async () => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/eventos");
+    const res = await fetch(`${API}/eventos`);
     const data = await res.json();
     setEventos(data);
     setCargado(true);
@@ -166,7 +195,8 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
         </div>
       ))}
       <br />
-      <button onClick={() => { localStorage.removeItem("usuario"); setPantalla("inicio"); }} style={btnStyle("#aaa")}>Cerrar sesión</button>    </div>
+      <button onClick={() => { localStorage.removeItem("usuario"); setPantalla("inicio"); }} style={btnStyle("#aaa")}>Cerrar sesión</button>
+    </div>
   );
 }
 
@@ -174,10 +204,9 @@ function Comprar({ usuario, evento, setPantalla }) {
   const [entradas, setEntradas] = useState([]);
   const [cargado, setCargado] = useState(false);
   const [mensaje, setMensaje] = useState("");
-  const [qr] = useState("");
 
   const cargarEntradas = async () => {
-    const res = await fetch(`https://eventos-production-24eb.up.railway.app/entradas/${evento.id}`);
+    const res = await fetch(`${API}/entradas/${evento.id}`);
     const data = await res.json();
     setEntradas(data);
     setCargado(true);
@@ -186,14 +215,18 @@ function Comprar({ usuario, evento, setPantalla }) {
   if (!cargado) cargarEntradas();
 
   const pagar = async (tipo_entrada_id) => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/crear-pago", {
+    localStorage.setItem("pendiente_usuario_id", usuario.id);
+    localStorage.setItem("pendiente_tipo_entrada_id", tipo_entrada_id);
+
+    const res = await fetch(`${API}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tipo_entrada_id, usuario_id: usuario.id })
     });
     const data = await res.json();
     if (res.ok) {
-      window.location.href = data.init_point;    } else {
+      window.location.href = data.init_point;
+    } else {
       setMensaje("❌ Error al procesar el pago");
     }
   };
@@ -212,7 +245,6 @@ function Comprar({ usuario, evento, setPantalla }) {
         </div>
       ))}
       {mensaje && <p>{mensaje}</p>}
-      {qr && <QRImagen codigo={qr} />}
       <br />
       <button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>
     </div>
@@ -223,7 +255,7 @@ function QRImagen({ codigo }) {
   const [imagen, setImagen] = useState(null);
 
   const cargarQR = async () => {
-    const res = await fetch(`https://eventos-production-24eb.up.railway.app/qr/${codigo}`);
+    const res = await fetch(`${API}/qr/${codigo}`);
     const data = await res.json();
     setImagen(data.imagen);
   };
@@ -242,6 +274,19 @@ function QRImagen({ codigo }) {
   );
 }
 
+function CompraExitosa({ qr, setPantalla }) {
+  return (
+    <div style={{ textAlign: "center", marginTop: "40px" }}>
+      <h2>🎉 Pago exitoso!</h2>
+      <p>Tu entrada fue comprada correctamente.</p>
+      <p>Te enviamos el QR a tu email.</p>
+      {qr && <QRImagen codigo={qr} />}
+      <br />
+      <button onClick={() => setPantalla("eventos")} style={btnStyle("#048A81")}>Volver a eventos</button>
+    </div>
+  );
+}
+
 function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   const [eventos, setEventos] = useState([]);
   const [cargado, setCargado] = useState(false);
@@ -251,7 +296,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   const [mensajeEntrada, setMensajeEntrada] = useState("");
 
   const cargarEventos = async () => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/eventos");
+    const res = await fetch(`${API}/eventos`);
     const data = await res.json();
     setEventos(data);
     setCargado(true);
@@ -260,7 +305,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   if (!cargado) cargarEventos();
 
   const crearEvento = async () => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/eventos", {
+    const res = await fetch(`${API}/eventos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...formEvento, capacidad: parseInt(formEvento.capacidad) })
@@ -275,12 +320,12 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
 
   const eliminarEvento = async (id) => {
     if (!window.confirm("¿Seguro que querés eliminar este evento?")) return;
-    const res = await fetch(`https://eventos-production-24eb.up.railway.app/eventos/${id}`, { method: "DELETE" });
+    const res = await fetch(`${API}/eventos/${id}`, { method: "DELETE" });
     if (res.ok) setCargado(false);
   };
 
   const crearEntrada = async () => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/entradas", {
+    const res = await fetch(`${API}/entradas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -343,7 +388,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
       <br />
       <button onClick={() => setPantalla("validar")} style={btnStyle("#c0392b")}>🔍 Validar QR en puerta</button>
       <br /><br />
-      <button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>
+      <button onClick={() => { localStorage.removeItem("usuario"); setPantalla("inicio"); }} style={btnStyle("#aaa")}>Cerrar sesión</button>
     </div>
   );
 }
@@ -352,7 +397,7 @@ function Estadisticas({ evento, setPantalla }) {
   const [stats, setStats] = useState(null);
 
   const cargarStats = async () => {
-    const res = await fetch(`https://eventos-production-24eb.up.railway.app/estadisticas/${evento.id}`);
+    const res = await fetch(`${API}/estadisticas/${evento.id}`);
     const data = await res.json();
     setStats(data);
   };
@@ -419,7 +464,7 @@ function ValidarQR({ setPantalla }) {
   };
 
   const validarCodigo = async (cod) => {
-    const res = await fetch("https://eventos-production-24eb.up.railway.app/validar-qr", {
+    const res = await fetch(`${API}/validar-qr`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ qr_codigo: cod })
