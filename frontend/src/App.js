@@ -13,15 +13,14 @@ function App() {
   const [qrFinal, setQrFinal] = useState(null);
 
   useEffect(() => {
-    useEffect(() => {
-      const params = new URLSearchParams(window.location.search);
-      console.log("STATUS:", status);
-      console.log("URL:", window.location.search);
-      console.log("USUARIO_ID:", usuario_id);
-      console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
+    const params = new URLSearchParams(window.location.search);
     const status = params.get("status");
     const usuario_id = localStorage.getItem("pendiente_usuario_id");
     const tipo_entrada_id = localStorage.getItem("pendiente_tipo_entrada_id");
+
+    console.log("STATUS:", status);
+    console.log("USUARIO_ID:", usuario_id);
+    console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
 
     if (status === "approved" && usuario_id && tipo_entrada_id) {
       localStorage.removeItem("pendiente_usuario_id");
@@ -34,6 +33,7 @@ function App() {
       })
       .then(res => res.json())
       .then(data => {
+        console.log("COMPRA:", data);
         if (data.qr_codigo) {
           setQrFinal(data.qr_codigo);
           setPantalla("compra_exitosa");
