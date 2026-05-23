@@ -57,7 +57,7 @@ function Registro({ setPantalla }) {
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async () => {
-    const res = await fetch("http://127.0.0.1:5000/registro", {
+    const res = await fetch("http://127.0.0.1:5001/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
@@ -94,7 +94,7 @@ function Login({ setPantalla, setUsuario }) {
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async () => {
-    const res = await fetch("http://127.0.0.1:5000/login", {
+    const res = await fetch("http://127.0.0.1:5001/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
@@ -126,7 +126,7 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
   const [cargado, setCargado] = useState(false);
 
   const cargarEventos = async () => {
-    const res = await fetch("http://127.0.0.1:5000/eventos");
+    const res = await fetch("http://127.0.0.1:5001/eventos");
     const data = await res.json();
     setEventos(data);
     setCargado(true);
@@ -167,13 +167,61 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
   );
 }
 
+function Comprar({ usuario, evento, setPantalla }) {
+  const [entradas, setEntradas] = useState([]);
+  const [cargado, setCargado] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+  const [qr, setQr] = useState("");
 
+  const cargarEntradas = async () => {
+    const res = await fetch(`http://127.0.0.1:5001/entradas/${evento.id}`);
+    const data = await res.json();
+    setEntradas(data);
+    setCargado(true);
+  };
+
+  if (!cargado) cargarEntradas();
+
+  const pagar = async (tipo_entrada_id) => {
+    const res = await fetch("http://127.0.0.1:5001/crear-pago", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo_entrada_id, usuario_id: usuario.id })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      window.open(data.init_point, "_blank");
+    } else {
+      setMensaje("❌ Error al procesar el pago");
+    }
+  };
+
+  return (
+    <div>
+      <h2>{evento.nombre}</h2>
+      <p style={pStyle}>📅 {evento.fecha} — 📍 {evento.lugar}</p>
+      <h3>Tipos de entrada</h3>
+      {entradas.map(e => (
+        <div key={e.id} style={cardStyle}>
+          <h4 style={{ margin: "0 0 8px 0" }}>{e.nombre}</h4>
+          <p style={pStyle}>💰 ${e.precio}</p>
+          <p style={pStyle}>🎟️ Cupos disponibles: {e.cupos}</p>
+          <button onClick={() => pagar(e.id)} style={btnStyle("#2E4057")}>💳 Comprar</button>
+        </div>
+      ))}
+      {mensaje && <p>{mensaje}</p>}
+      {qr && <QRImagen codigo={qr} />}
+      <br />
+      <button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>
+    </div>
+  );
+}
 
 function QRImagen({ codigo }) {
   const [imagen, setImagen] = useState(null);
 
   const cargarQR = async () => {
-    const res = await fetch(`http://127.0.0.1:5000/qr/${codigo}`);
+    const res = await fetch(`http://127.0.0.1:5001/qr/${codigo}`);
     const data = await res.json();
     setImagen(data.imagen);
   };
@@ -201,7 +249,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   const [mensajeEntrada, setMensajeEntrada] = useState("");
 
   const cargarEventos = async () => {
-    const res = await fetch("http://127.0.0.1:5000/eventos");
+    const res = await fetch("http://127.0.0.1:5001/eventos");
     const data = await res.json();
     setEventos(data);
     setCargado(true);
@@ -210,7 +258,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   if (!cargado) cargarEventos();
 
   const crearEvento = async () => {
-    const res = await fetch("http://127.0.0.1:5000/eventos", {
+    const res = await fetch("http://127.0.0.1:5001/eventos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...formEvento, capacidad: parseInt(formEvento.capacidad) })
@@ -225,12 +273,12 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
 
   const eliminarEvento = async (id) => {
     if (!window.confirm("¿Seguro que querés eliminar este evento?")) return;
-    const res = await fetch(`http://127.0.0.1:5000/eventos/${id}`, { method: "DELETE" });
+    const res = await fetch(`http://127.0.0.1:5001/eventos/${id}`, { method: "DELETE" });
     if (res.ok) setCargado(false);
   };
 
   const crearEntrada = async () => {
-    const res = await fetch("http://127.0.0.1:5000/entradas", {
+    const res = await fetch("http://127.0.0.1:5001/entradas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -298,23 +346,16 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   );
 }
 
-
-
+function Estadisticas({ evento, setPantalla }) {
+  const [stats, setStats] = useState(null);
 
   const cargarStats = async () => {
-    const res = await fetch(`http://127.0.0.1:5000/estadisticas/${evento.id}`);
+    const res = await fetch(`http://127.0.0.1:5001/estadisticas/${evento.id}`);
     const data = await res.json();
     setStats(data);
   };
 
   if (!stats) cargarStats();
-
-  const datosGrafico = stats?.detalle.map(d => ({
-    tipo: d.tipo,
-    Vendidas: d.vendidas,
-    Accesos: d.accesos,
-    Recaudado: d.recaudado
-  }));
 
   return (
     <div>
@@ -327,27 +368,17 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
             <p>💰 <strong>Total recaudado:</strong> ${stats.total_recaudado}</p>
             <p>✅ <strong>Accesos validados:</strong> {stats.total_accesos}</p>
           </div>
-
           <h3>Ventas por tipo de entrada</h3>
           <Bar
-  data={{
-    labels: stats.detalle.map(d => d.tipo),
-    datasets: [
-      {
-        label: "Vendidas",
-        data: stats.detalle.map(d => d.vendidas),
-        backgroundColor: "#2E4057"
-      },
-      {
-        label: "Accesos",
-        data: stats.detalle.map(d => d.accesos),
-        backgroundColor: "#048A81"
-      }
-    ]
-  }}
-  options={{ responsive: true }}
-/>
-
+            data={{
+              labels: stats.detalle.map(d => d.tipo),
+              datasets: [
+                { label: "Vendidas", data: stats.detalle.map(d => d.vendidas), backgroundColor: "#2E4057" },
+                { label: "Accesos", data: stats.detalle.map(d => d.accesos), backgroundColor: "#048A81" }
+              ]
+            }}
+            options={{ responsive: true }}
+          />
           <h3>Detalle por tipo</h3>
           {stats.detalle.map((d, i) => (
             <div key={i} style={cardStyle}>
@@ -381,12 +412,12 @@ function ValidarQR({ setPantalla }) {
         html5QrCode.stop();
         await validarCodigo(codigoDetectado);
       },
-      (error) => {}
+      () => {}
     );
   };
 
   const validarCodigo = async (cod) => {
-    const res = await fetch("http://127.0.0.1:5000/validar-qr", {
+    const res = await fetch("http://127.0.0.1:5001/validar-qr", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ qr_codigo: cod })
@@ -402,29 +433,16 @@ function ValidarQR({ setPantalla }) {
   return (
     <div>
       <h2>🔍 Validar QR en puerta</h2>
-
-      <button onClick={iniciarEscaner} style={btnStyle("#2E4057")}>
-        📷 Escanear con cámara
-      </button>
-
+      <button onClick={iniciarEscaner} style={btnStyle("#2E4057")}>📷 Escanear con cámara</button>
       <br /><br />
       <div id="lector-qr" style={{ width: "100%" }}></div>
-
       <hr />
       <p>O ingresá el código manualmente:</p>
-      <input
-        placeholder="Código QR"
-        style={inputStyle}
-        onChange={e => setCodigo(e.target.value)}
-      />
+      <input placeholder="Código QR" style={inputStyle} onChange={e => setCodigo(e.target.value)} />
       <button onClick={validarManual} style={btnStyle("#048A81")}>Validar</button>
-
       {resultado && (
         <div style={{
-          marginTop: "20px",
-          padding: "20px",
-          borderRadius: "8px",
-          textAlign: "center",
+          marginTop: "20px", padding: "20px", borderRadius: "8px", textAlign: "center",
           backgroundColor: resultado.ok ? "#d4edda" : "#f8d7da",
           color: resultado.ok ? "#155724" : "#721c24"
         }}>
@@ -432,7 +450,6 @@ function ValidarQR({ setPantalla }) {
           <p><strong>{resultado.mensaje}</strong></p>
         </div>
       )}
-
       <br />
       <button onClick={() => setPantalla("admin")} style={btnStyle("#aaa")}>Volver</button>
     </div>
