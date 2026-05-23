@@ -200,11 +200,11 @@ function Comprar({ usuario, evento, setPantalla }) {
     const res = await fetch("http://127.0.0.1:5000/crear-pago", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo_entrada_id })
+      body: JSON.stringify({ tipo_entrada_id, usuario_id: usuario.id })
     });
     const data = await res.json();
     if (res.ok) {
-      window.open(data.init_point, "_blank");
+      window.location.href = data.init_point;
     } else {
       setMensaje("❌ Error al procesar el pago");
     }

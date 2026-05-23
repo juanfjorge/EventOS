@@ -229,15 +229,70 @@ def crear_pago():
     tipo_entrada = TipoEntrada.query.get_or_404(data['tipo_entrada_id'])
     evento = Evento.query.get_or_404(tipo_entrada.evento_id)
     preference_data = {
-        "items": [{"title": f"{evento.nombre} - {tipo_entrada.nombre}", "quantity": 1, "unit_price": float(tipo_entrada.precio)}]
-    
-    }
-    
+    "items": [{"title": f"{evento.nombre} - {tipo_entrada.nombre}", "quantity": 1, "unit_price": float(tipo_entrada.precio)}],
+    "external_reference": f"{data['usuario_id']}-{data['tipo_entrada_id']}",
+    "back_urls": {
+        "success": "http://localhost:3000",
+        "failure": "http://localhost:3000",
+        "pending": "http://localhost:3000"
+    },
+    "notification_url": "https://eventos-production-24eb.up.railway.app/webhook"
+},
+
     preference_response = sdk.preference().create(preference_data)
     preference = preference_response["response"]
     if "init_point" not in preference:
         return jsonify({"error": "Error de MercadoPago", "detalle": preference}), 500
     return jsonify({"init_point": preference["init_point"], "preference_id": preference["id"]}), 200
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.get_json()
+    print("WEBHOOK RECIBIDO:", data)
+
+    if data and data.get('type') == 'payment':
+        payment_id = data['data']['id']
+        payment = sdk.payment().get(payment_id)
+        payment_info = payment["response"]
+
+        if payment_info['status'] == 'approved':
+            external_reference = payment_info.get('external_reference')
+            if external_reference:
+                usuario_id, tipo_entrada_id = external_reference.split('-')
+                entrada = TipoEntrada.query.get(int(tipo_entrada_id))
+                usuario = Usuario.query.get(int(usuario_id))
+
+                if entrada and usuario:
+                    codigo_qr = str(uuid.uuid4())
+                    nueva_compra = Compra(
+                        usuario_id=int(usuario_id),
+                        tipo_entrada_id=int(tipo_entrada_id),
+                        fecha_compra=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        qr_codigo=codigo_qr,
+                        qr_usado=False
+                    )
+                    db.session.add(nueva_compra)
+                    db.session.commit()
+
+                    import qrcode
+                    qr = qrcode.make(codigo_qr)
+                    buffer = io.BytesIO()
+                    qr.save(buffer, format='PNG')
+                    buffer.seek(0)
+
+                    try:
+                        msg = Message(
+                            subject=f"Tu entrada para {entrada.evento.nombre} 🎉",
+                            sender=os.environ.get('MAIL_USERNAME'),
+                            recipients=[usuario.email]
+                        )
+                        msg.body = f"Hola {usuario.nombre}!\n\nTu pago fue aprobado.\n\nPresentá el QR adjunto en la puerta.\n\nEventOS"
+                        msg.attach("qr_entrada.png", "image/png", buffer.getvalue())
+                        mail.send(msg)
+                    except Exception as e:
+                        print("Error al enviar email:", e)
+
+    return jsonify({'status': 'ok'}), 200
 
 if __name__ == '__main__':
     with app.app_context():
