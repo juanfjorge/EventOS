@@ -167,68 +167,7 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
   );
 }
 
-function Comprar({ usuario, evento, setPantalla }) {
-  const [entradas, setEntradas] = useState([]);
-  const [cargado, setCargado] = useState(false);
-  const [mensaje, setMensaje] = useState("");
-  const [qr, setQr] = useState("");
 
-  const cargarEntradas = async () => {
-    const res = await fetch(`http://127.0.0.1:5000/entradas/${evento.id}`);
-    const data = await res.json();
-    setEntradas(data);
-    setCargado(true);
-  };
-
-  if (!cargado) cargarEntradas();
-
-  const comprar = async (tipo_entrada_id) => {
-    const res = await fetch("http://127.0.0.1:5000/compras", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuario_id: usuario.id, tipo_entrada_id })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setMensaje("✅ Compra exitosa!");
-      setQr(data.qr_codigo);
-    } else {
-      setMensaje("❌ " + data.error);
-    }
-  };
-  const pagar = async (tipo_entrada_id) => {
-    const res = await fetch("http://127.0.0.1:5000/crear-pago", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo_entrada_id, usuario_id: usuario.id })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      window.location.href = data.init_point;
-    } else {
-      setMensaje("❌ Error al procesar el pago");
-    }
-  };
-
-  return (
-    <div>
-      <h2>{evento.nombre}</h2>
-      <p style={pStyle}>📅 {evento.fecha} — 📍 {evento.lugar}</p>
-      <h3>Tipos de entrada</h3>
-      {entradas.map(e => (
-        <div key={e.id} style={cardStyle}>
-          <h4 style={{ margin: "0 0 8px 0" }}>{e.nombre}</h4>
-          <p style={pStyle}>💰 ${e.precio}</p>
-          <p style={pStyle}>🎟️ Cupos disponibles: {e.cupos}</p>
-          <button onClick={() => pagar(e.id)} style={btnStyle("#2E4057")}>💳 Comprar</button>        </div>
-      ))}
-      {mensaje && <p>{mensaje}</p>}
-      {qr && <QRImagen codigo={qr} />}
-      <br />
-      <button onClick={() => setPantalla("eventos")} style={btnStyle("#aaa")}>Volver</button>
-    </div>
-  );
-}
 
 function QRImagen({ codigo }) {
   const [imagen, setImagen] = useState(null);
@@ -360,8 +299,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
 }
 
 
-function Estadisticas({ evento, setPantalla }) {
-  const [stats, setStats] = useState(null);
+
 
   const cargarStats = async () => {
     const res = await fetch(`http://127.0.0.1:5000/estadisticas/${evento.id}`);
@@ -432,18 +370,15 @@ function Estadisticas({ evento, setPantalla }) {
 
 function ValidarQR({ setPantalla }) {
   const [resultado, setResultado] = useState(null);
-  const [escaneando, setEscaneando] = useState(false);
   const [codigo, setCodigo] = useState("");
 
   const iniciarEscaner = () => {
-    setEscaneando(true);
     const html5QrCode = new window.Html5Qrcode("lector-qr");
     html5QrCode.start(
       { facingMode: "environment" },
       { fps: 10, qrbox: { width: 250, height: 250 } },
       async (codigoDetectado) => {
         html5QrCode.stop();
-        setEscaneando(false);
         await validarCodigo(codigoDetectado);
       },
       (error) => {}
