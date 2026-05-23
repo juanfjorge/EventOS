@@ -171,7 +171,7 @@ function Comprar({ usuario, evento, setPantalla }) {
   const [entradas, setEntradas] = useState([]);
   const [cargado, setCargado] = useState(false);
   const [mensaje, setMensaje] = useState("");
-  const [qr, setQr] = useState("");
+  const [qr] = useState("");
 
   const cargarEntradas = async () => {
     const res = await fetch(`http://127.0.0.1:5001/entradas/${evento.id}`);
