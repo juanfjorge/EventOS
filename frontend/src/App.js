@@ -3,10 +3,11 @@ import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+
 function App() {
-  const [pantalla, setPantalla] = useState("inicio");
-  const [usuario, setUsuario] = useState(null);
-  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
+  const usuarioGuardado = localStorage.getItem("usuario");
+  const [usuario, setUsuario] = useState(usuarioGuardado ? JSON.parse(usuarioGuardado) : null);
+  const [pantalla, setPantalla] = useState(usuarioGuardado ? "eventos" : "inicio");
 
   const irA = (destino) => {
     if (destino === "admin" && usuario?.rol !== "admin") return;
@@ -102,7 +103,9 @@ function Login({ setPantalla, setUsuario }) {
     const data = await res.json();
     if (res.ok) {
       setUsuario(data.usuario);
+      localStorage.setItem("usuario", JSON.stringify(data.usuario));
       setPantalla("eventos");
+    
     } else {
       setMensaje("❌ " + data.error);
     }
@@ -162,8 +165,7 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
         </div>
       ))}
       <br />
-      <button onClick={() => setPantalla("inicio")} style={btnStyle("#aaa")}>Cerrar sesión</button>
-    </div>
+      <button onClick={() => { localStorage.removeItem("usuario"); setPantalla("inicio"); }} style={btnStyle("#aaa")}>Cerrar sesión</button>    </div>
   );
 }
 
