@@ -193,8 +193,7 @@ function Comprar({ usuario, evento, setPantalla }) {
     });
     const data = await res.json();
     if (res.ok) {
-      window.open(data.init_point, "_blank");
-    } else {
+      window.location.href = data.init_point;    } else {
       setMensaje("❌ Error al procesar el pago");
     }
   };
