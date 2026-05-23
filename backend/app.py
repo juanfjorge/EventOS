@@ -237,7 +237,7 @@ def crear_pago():
         "pending": "http://localhost:3000"
     },
     "notification_url": "https://eventos-production-24eb.up.railway.app/webhook"
-},
+}
 
     preference_response = sdk.preference().create(preference_data)
     preference = preference_response["response"]
