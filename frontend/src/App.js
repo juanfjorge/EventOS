@@ -8,6 +8,7 @@ function App() {
   const usuarioGuardado = localStorage.getItem("usuario");
   const [usuario, setUsuario] = useState(usuarioGuardado ? JSON.parse(usuarioGuardado) : null);
   const [pantalla, setPantalla] = useState(usuarioGuardado ? "eventos" : "inicio");
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
 
   const irA = (destino) => {
     if (destino === "admin" && usuario?.rol !== "admin") return;
