@@ -57,7 +57,7 @@ function Registro({ setPantalla }) {
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async () => {
-    const res = await fetch("http://127.0.0.1:5001/registro", {
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
@@ -94,7 +94,7 @@ function Login({ setPantalla, setUsuario }) {
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async () => {
-    const res = await fetch("http://127.0.0.1:5001/login", {
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
@@ -126,7 +126,7 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
   const [cargado, setCargado] = useState(false);
 
   const cargarEventos = async () => {
-    const res = await fetch("http://127.0.0.1:5001/eventos");
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/eventos");
     const data = await res.json();
     setEventos(data);
     setCargado(true);
@@ -174,7 +174,7 @@ function Comprar({ usuario, evento, setPantalla }) {
   const [qr] = useState("");
 
   const cargarEntradas = async () => {
-    const res = await fetch(`http://127.0.0.1:5001/entradas/${evento.id}`);
+    const res = await fetch(`https://eventos-production-24eb.up.railway.app/entradas/${evento.id}`);
     const data = await res.json();
     setEntradas(data);
     setCargado(true);
@@ -183,7 +183,7 @@ function Comprar({ usuario, evento, setPantalla }) {
   if (!cargado) cargarEntradas();
 
   const pagar = async (tipo_entrada_id) => {
-    const res = await fetch("http://127.0.0.1:5001/crear-pago", {
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/crear-pago", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tipo_entrada_id, usuario_id: usuario.id })
@@ -221,7 +221,7 @@ function QRImagen({ codigo }) {
   const [imagen, setImagen] = useState(null);
 
   const cargarQR = async () => {
-    const res = await fetch(`http://127.0.0.1:5001/qr/${codigo}`);
+    const res = await fetch(`https://eventos-production-24eb.up.railway.app/qr/${codigo}`);
     const data = await res.json();
     setImagen(data.imagen);
   };
@@ -249,7 +249,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   const [mensajeEntrada, setMensajeEntrada] = useState("");
 
   const cargarEventos = async () => {
-    const res = await fetch("http://127.0.0.1:5001/eventos");
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/eventos");
     const data = await res.json();
     setEventos(data);
     setCargado(true);
@@ -258,7 +258,7 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
   if (!cargado) cargarEventos();
 
   const crearEvento = async () => {
-    const res = await fetch("http://127.0.0.1:5001/eventos", {
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/eventos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...formEvento, capacidad: parseInt(formEvento.capacidad) })
@@ -273,12 +273,12 @@ function Admin({ usuario, setPantalla, setEventoSeleccionado }) {
 
   const eliminarEvento = async (id) => {
     if (!window.confirm("¿Seguro que querés eliminar este evento?")) return;
-    const res = await fetch(`http://127.0.0.1:5001/eventos/${id}`, { method: "DELETE" });
+    const res = await fetch(`https://eventos-production-24eb.up.railway.app/eventos/${id}`, { method: "DELETE" });
     if (res.ok) setCargado(false);
   };
 
   const crearEntrada = async () => {
-    const res = await fetch("http://127.0.0.1:5001/entradas", {
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/entradas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -350,7 +350,7 @@ function Estadisticas({ evento, setPantalla }) {
   const [stats, setStats] = useState(null);
 
   const cargarStats = async () => {
-    const res = await fetch(`http://127.0.0.1:5001/estadisticas/${evento.id}`);
+    const res = await fetch(`https://eventos-production-24eb.up.railway.app/estadisticas/${evento.id}`);
     const data = await res.json();
     setStats(data);
   };
@@ -417,7 +417,7 @@ function ValidarQR({ setPantalla }) {
   };
 
   const validarCodigo = async (cod) => {
-    const res = await fetch("http://127.0.0.1:5001/validar-qr", {
+    const res = await fetch("https://eventos-production-24eb.up.railway.app/validar-qr", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ qr_codigo: cod })
