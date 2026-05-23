@@ -230,7 +230,9 @@ def crear_pago():
     evento = Evento.query.get_or_404(tipo_entrada.evento_id)
     preference_data = {
         "items": [{"title": f"{evento.nombre} - {tipo_entrada.nombre}", "quantity": 1, "unit_price": float(tipo_entrada.precio)}]
+    
     }
+    
     preference_response = sdk.preference().create(preference_data)
     preference = preference_response["response"]
     if "init_point" not in preference:
@@ -241,4 +243,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         print("Base de datos creada ✓")
-    app.run(debug=True)
+app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
