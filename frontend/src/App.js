@@ -6,9 +6,11 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 const API = "https://eventos-production-24eb.up.railway.app";
 
 function App() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get("status");
   const usuarioGuardado = localStorage.getItem("usuario");
   const [usuario, setUsuario] = useState(usuarioGuardado ? JSON.parse(usuarioGuardado) : null);
-  const [pantalla, setPantalla] = useState(usuarioGuardado ? "eventos" : "inicio");
+  const [pantalla, setPantalla] = useState(status === "approved" ? "cargando" : usuarioGuardado ? "eventos" : "inicio");
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [qrFinal, setQrFinal] = useState(null);
 
@@ -17,14 +19,12 @@ function App() {
     const status = params.get("status");
     const usuario_id = params.get("usuario_id");
     const tipo_entrada_id = params.get("tipo_entrada_id");
-
+  
     console.log("STATUS:", status);
     console.log("USUARIO_ID:", usuario_id);
     console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
-
+  
     if (status === "approved" && usuario_id && tipo_entrada_id) {
-
-
       fetch(`${API}/compras`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,9 +71,13 @@ function App() {
       {pantalla === "compra_exitosa" && (
         <CompraExitosa qr={qrFinal} setPantalla={irA} />
       )}
+      {pantalla === "cargando" && (
+        <div style={{ textAlign: "center", marginTop: "100px" }}>
+          <p>⏳ Procesando tu compra...</p>
+        </div>
+      )}
     </div>
   );
-}
 
 function Inicio({ setPantalla }) {
   return (
