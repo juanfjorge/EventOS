@@ -28,19 +28,17 @@ function App() {
     if (status === "approved" && usuario_id && tipo_entrada_id) {
       setPantalla("compra_exitosa");
   
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 120000);
-  
-      fetch(`${API}/compras`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) }),
-        signal: controller.signal
+      // Primero despertar el backend
+      fetch(`${API}/`)
+      .then(() => {
+        // Después de despertar, crear la compra
+        return fetch(`${API}/compras`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) })
+        });
       })
-      .then(res => {
-        clearTimeout(timeout);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         console.log("COMPRA:", data);
         if (data.qr_codigo) {
