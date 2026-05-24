@@ -27,12 +27,20 @@ function App() {
   
     if (status === "approved" && usuario_id && tipo_entrada_id) {
       setPantalla("compra_exitosa");
+  
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+  
       fetch(`${API}/compras`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) })
+        body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) }),
+        signal: controller.signal
       })
-      .then(res => res.json())
+      .then(res => {
+        clearTimeout(timeout);
+        return res.json();
+      })
       .then(data => {
         console.log("COMPRA:", data);
         if (data.qr_codigo) {
@@ -46,22 +54,18 @@ function App() {
               email: usuarioData.email,
               nombre: usuarioData.nombre,
               evento: "Evento",
-              fecha: "",
-              lugar: "",
-              tipo_entrada: "",
               qr_codigo: data.qr_codigo
             },
             "T0Yu1bbO72jo4W-ve"
           ).then(() => {
             console.log("Email enviado correctamente");
           }).catch(err => {
-            console.log("Error al enviar email:", err);
+            console.log("Error email:", err);
           });
         }
       })
       .catch(err => {
-        console.log("FETCH ERROR:", err);
-        setPantalla("eventos");
+        console.log("FETCH ERROR:", err.message);
       });
     }
   }, []);
