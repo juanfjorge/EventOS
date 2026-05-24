@@ -36,10 +36,18 @@ function App() {
         if (data.qr_codigo) {
           setQrFinal(data.qr_codigo);
           setPantalla("compra_exitosa");
+        } else {
+          console.log("ERROR EN COMPRA:", data);
+          setPantalla("eventos");
         }
+      })
+      .catch(err => {
+        console.log("FETCH ERROR:", err);
+        setPantalla("eventos");
       });
     }
   }, []);
+  
 
   const irA = (destino) => {
     if (destino === "admin" && usuario?.rol !== "admin") return;
