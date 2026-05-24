@@ -32,21 +32,52 @@ function App() {
     console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
 
     if (status === "approved" && usuario_id && tipo_entrada_id) {
-
-      // Primero despertar Railway
-      const despertar = () => fetch(`${API}/`).catch(() => {});
-      
-      const intentarCompra = () => {
-        return fetch(`${API}/compras`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) })
-        })
-        .then(res => {
-          if (!res.ok) throw new Error("Error " + res.status);
-          return res.json();
-        });
-      };
+      setPantalla("compra_exitosa");
+    
+      fetch(`${API}/compras`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Error " + res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log("COMPRA:", data);
+        if (data.qr_codigo) {
+          setQrFinal(data.qr_codigo);
+    
+          fetch(`${API}/eventos/${evento_id}`)
+          .then(r => r.json())
+          .then(eventoData => {
+            const usuarioData = JSON.parse(localStorage.getItem("usuario"));
+            emailjs.send(
+              "service_8ih75xn",
+              "template_fygfwpl",
+              {
+                email: usuarioData.email,
+                nombre: usuarioData.nombre,
+                evento: eventoData.nombre,
+                fecha: eventoData.fecha,
+                lugar: eventoData.lugar,
+                tipo_entrada: tipo_entrada_id,
+                qr_codigo: data.qr_codigo
+              },
+              "T0Yu1bbO72jo4W-ve"
+            ).then(() => {
+              console.log("Email enviado correctamente");
+            }).catch(err => {
+              console.log("Error email:", err);
+            });
+          });
+        }
+      })
+      .catch(err => {
+        console.log("Error compra:", err.message);
+        setPantalla("eventos");
+      });
+    }
 
       // Despertar y reintentar si falla
       despertar()
