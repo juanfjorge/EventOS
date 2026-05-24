@@ -1,16 +1,21 @@
-import emailjs from '@emailjs/browser';
 import { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
+import emailjs from '@emailjs/browser';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const API = "https://eventos-production-24eb.up.railway.app";
 
+// Mantener Railway despierto
+setInterval(() => {
+  fetch(`${API}/`).catch(() => {});
+}, 300000);
+
 function App() {
-  const params = new URLSearchParams(window.location.search);
-  const status = params.get("status");
   const usuarioGuardado = localStorage.getItem("usuario");
   const [usuario, setUsuario] = useState(usuarioGuardado ? JSON.parse(usuarioGuardado) : null);
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get("status");
   const [pantalla, setPantalla] = useState(status === "approved" ? "cargando" : usuarioGuardado ? "eventos" : "inicio");
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [qrFinal, setQrFinal] = useState(null);
@@ -20,51 +25,82 @@ function App() {
     const status = params.get("status");
     const usuario_id = params.get("usuario_id");
     const tipo_entrada_id = params.get("tipo_entrada_id");
-  
+    const evento_id = params.get("evento_id");
+
     console.log("STATUS:", status);
     console.log("USUARIO_ID:", usuario_id);
     console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
-  
+
     if (status === "approved" && usuario_id && tipo_entrada_id) {
-      setPantalla("compra_exitosa");
-  
-      // Primero despertar el backend
-      fetch(`${API}/`)
-      .then(() => {
-        // Después de despertar, crear la compra
+
+      // Primero despertar Railway
+      const despertar = () => fetch(`${API}/`).catch(() => {});
+      
+      const intentarCompra = () => {
         return fetch(`${API}/compras`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usuario_id: parseInt(usuario_id), tipo_entrada_id: parseInt(tipo_entrada_id) })
+        })
+        .then(res => {
+          if (!res.ok) throw new Error("Error " + res.status);
+          return res.json();
         });
-      })
-      .then(res => res.json())
-      .then(data => {
-        console.log("COMPRA:", data);
-        if (data.qr_codigo) {
-          setQrFinal(data.qr_codigo);
-  
-          const usuarioData = JSON.parse(localStorage.getItem("usuario"));
-          emailjs.send(
-            "service_8ih75xn",
-            "template_fygfwpl",
-            {
-              email: usuarioData.email,
-              nombre: usuarioData.nombre,
-              evento: "Evento",
-              qr_codigo: data.qr_codigo
-            },
-            "T0Yu1bbO72jo4W-ve"
-          ).then(() => {
-            console.log("Email enviado correctamente");
-          }).catch(err => {
-            console.log("Error email:", err);
-          });
-        }
-      })
-      .catch(err => {
-        console.log("FETCH ERROR:", err.message);
-      });
+      };
+
+      // Despertar y reintentar si falla
+      despertar()
+        .then(() => new Promise(resolve => setTimeout(resolve, 3000))) // esperar 3 segundos
+        .then(() => intentarCompra())
+        .then(data => {
+          console.log("COMPRA:", data);
+          if (data.qr_codigo) {
+            setQrFinal(data.qr_codigo);
+            setPantalla("compra_exitosa");
+
+            // Obtener datos del evento para el email
+            fetch(`${API}/eventos/${evento_id}`)
+            .then(r => r.json())
+            .then(eventoData => {
+              const usuarioData = JSON.parse(localStorage.getItem("usuario"));
+              emailjs.send(
+                "service_8ih75xn",
+                "template_fygfwpl",
+                {
+                  email: usuarioData.email,
+                  nombre: usuarioData.nombre,
+                  evento: eventoData.nombre,
+                  fecha: eventoData.fecha,
+                  lugar: eventoData.lugar,
+                  tipo_entrada: tipo_entrada_id,
+                  qr_codigo: data.qr_codigo
+                },
+                "T0Yu1bbO72jo4W-ve"
+              ).then(() => {
+                console.log("Email enviado correctamente");
+              }).catch(err => {
+                console.log("Error email:", err);
+              });
+            });
+          }
+        })
+        .catch(err => {
+          console.log("Error compra:", err.message);
+          // Reintentar una vez más después de 5 segundos
+          setTimeout(() => {
+            intentarCompra()
+            .then(data => {
+              if (data.qr_codigo) {
+                setQrFinal(data.qr_codigo);
+                setPantalla("compra_exitosa");
+              }
+            })
+            .catch(e => {
+              console.log("Error reintento:", e.message);
+              setPantalla("eventos");
+            });
+          }, 5000);
+        });
     }
   }, []);
 
@@ -75,36 +111,38 @@ function App() {
     setPantalla(destino);
   };
 
-return (
-  <div style={{ fontFamily: "Arial", maxWidth: "480px", margin: "0 auto", padding: "20px", boxSizing: "border-box" }}>
-    {pantalla === "inicio" && <Inicio setPantalla={irA} />}
-    {pantalla === "registro" && <Registro setPantalla={irA} />}
-    {pantalla === "login" && <Login setPantalla={irA} setUsuario={setUsuario} />}
-    {pantalla === "eventos" && (
-      <Eventos usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
-    )}
-    {pantalla === "comprar" && (
-      <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} />
-    )}
-    {pantalla === "admin" && (
-      <Admin usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
-    )}
-    {pantalla === "estadisticas" && (
-      <Estadisticas evento={eventoSeleccionado} setPantalla={irA} />
-    )}
-    {pantalla === "validar" && (
-      <ValidarQR setPantalla={irA} />
-    )}
-    {pantalla === "compra_exitosa" && (
-      <CompraExitosa qr={qrFinal} setPantalla={irA} />
-    )}
-    {pantalla === "cargando" && (
-      <div style={{ textAlign: "center", marginTop: "100px" }}>
-        <p>⏳ Procesando tu compra...</p>
-      </div>
-    )}
-  </div>
-);}
+  return (
+    <div style={{ fontFamily: "Arial", maxWidth: "480px", margin: "0 auto", padding: "20px", boxSizing: "border-box" }}>
+      {pantalla === "inicio" && <Inicio setPantalla={irA} />}
+      {pantalla === "registro" && <Registro setPantalla={irA} />}
+      {pantalla === "login" && <Login setPantalla={irA} setUsuario={setUsuario} />}
+      {pantalla === "eventos" && (
+        <Eventos usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
+      )}
+      {pantalla === "comprar" && (
+        <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} />
+      )}
+      {pantalla === "admin" && (
+        <Admin usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
+      )}
+      {pantalla === "estadisticas" && (
+        <Estadisticas evento={eventoSeleccionado} setPantalla={irA} />
+      )}
+      {pantalla === "validar" && (
+        <ValidarQR setPantalla={irA} />
+      )}
+      {pantalla === "compra_exitosa" && (
+        <CompraExitosa qr={qrFinal} setPantalla={irA} />
+      )}
+      {pantalla === "cargando" && (
+        <div style={{ textAlign: "center", marginTop: "100px" }}>
+          <h2>⏳ Procesando tu compra...</h2>
+          <p>Por favor esperá unos segundos.</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Inicio({ setPantalla }) {
   return (

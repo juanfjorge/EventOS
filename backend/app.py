@@ -236,10 +236,10 @@ def crear_pago():
         "items": [{"title": f"{evento.nombre} - {tipo_entrada.nombre}", "quantity": 1, "unit_price": float(tipo_entrada.precio)}],
         "external_reference": f"{data['usuario_id']}-{data['tipo_entrada_id']}",
         "back_urls": {
-            "success": f"https://event-os-beta.vercel.app/?usuario_id={data['usuario_id']}&tipo_entrada_id={data['tipo_entrada_id']}",
-            "failure": "https://event-os-beta.vercel.app",
-            "pending": "https://event-os-beta.vercel.app"
-        },
+        "success": f"https://event-os-beta.vercel.app/?usuario_id={data['usuario_id']}&tipo_entrada_id={data['tipo_entrada_id']}&evento_id={tipo_entrada.evento_id}",
+        "failure": "https://event-os-beta.vercel.app",
+        "pending": "https://event-os-beta.vercel.app"
+    },
         "auto_return": "approved",
         "notification_url": "https://eventos-production-24eb.up.railway.app/webhook"
     }
