@@ -1,3 +1,4 @@
+import emailjs from '@emailjs/browser';
 import { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
@@ -20,6 +21,10 @@ function App() {
     const usuario_id = params.get("usuario_id");
     const tipo_entrada_id = params.get("tipo_entrada_id");
   
+    console.log("STATUS:", status);
+    console.log("USUARIO_ID:", usuario_id);
+    console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
+  
     if (status === "approved" && usuario_id && tipo_entrada_id) {
       setPantalla("compra_exitosa");
       fetch(`${API}/compras`, {
@@ -29,14 +34,37 @@ function App() {
       })
       .then(res => res.json())
       .then(data => {
+        console.log("COMPRA:", data);
         if (data.qr_codigo) {
           setQrFinal(data.qr_codigo);
+  
+          const usuarioData = JSON.parse(localStorage.getItem("usuario"));
+          emailjs.send(
+            "service_8ih75xn",
+            "template_fygfwpl",
+            {
+              email: usuarioData.email,
+              nombre: usuarioData.nombre,
+              evento: "Evento",
+              fecha: "",
+              lugar: "",
+              tipo_entrada: "",
+              qr_codigo: data.qr_codigo
+            },
+            "T0Yu1bbO72jo4W-ve"
+          ).then(() => {
+            console.log("Email enviado correctamente");
+          }).catch(err => {
+            console.log("Error al enviar email:", err);
+          });
         }
       })
-      .catch(err => console.log("Error:", err));
+      .catch(err => {
+        console.log("FETCH ERROR:", err);
+        setPantalla("eventos");
+      });
     }
   }, []);
-  
 
   const irA = (destino) => {
     if (destino === "admin" && usuario?.rol !== "admin") return;
