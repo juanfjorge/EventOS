@@ -48,36 +48,36 @@ function App() {
     setPantalla(destino);
   };
 
-  return (
-    <div style={{ fontFamily: "Arial", maxWidth: "480px", margin: "0 auto", padding: "20px", boxSizing: "border-box" }}>
-      {pantalla === "inicio" && <Inicio setPantalla={irA} />}
-      {pantalla === "registro" && <Registro setPantalla={irA} />}
-      {pantalla === "login" && <Login setPantalla={irA} setUsuario={setUsuario} />}
-      {pantalla === "eventos" && (
-        <Eventos usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
-      )}
-      {pantalla === "comprar" && (
-        <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} />
-      )}
-      {pantalla === "admin" && (
-        <Admin usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
-      )}
-      {pantalla === "estadisticas" && (
-        <Estadisticas evento={eventoSeleccionado} setPantalla={irA} />
-      )}
-      {pantalla === "validar" && (
-        <ValidarQR setPantalla={irA} />
-      )}
-      {pantalla === "compra_exitosa" && (
-        <CompraExitosa qr={qrFinal} setPantalla={irA} />
-      )}
-      {pantalla === "cargando" && (
-        <div style={{ textAlign: "center", marginTop: "100px" }}>
-          <p>⏳ Procesando tu compra...</p>
-        </div>
-      )}
-    </div>
-  );
+return (
+  <div style={{ fontFamily: "Arial", maxWidth: "480px", margin: "0 auto", padding: "20px", boxSizing: "border-box" }}>
+    {pantalla === "inicio" && <Inicio setPantalla={irA} />}
+    {pantalla === "registro" && <Registro setPantalla={irA} />}
+    {pantalla === "login" && <Login setPantalla={irA} setUsuario={setUsuario} />}
+    {pantalla === "eventos" && (
+      <Eventos usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
+    )}
+    {pantalla === "comprar" && (
+      <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} />
+    )}
+    {pantalla === "admin" && (
+      <Admin usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
+    )}
+    {pantalla === "estadisticas" && (
+      <Estadisticas evento={eventoSeleccionado} setPantalla={irA} />
+    )}
+    {pantalla === "validar" && (
+      <ValidarQR setPantalla={irA} />
+    )}
+    {pantalla === "compra_exitosa" && (
+      <CompraExitosa qr={qrFinal} setPantalla={irA} />
+    )}
+    {pantalla === "cargando" && (
+      <div style={{ textAlign: "center", marginTop: "100px" }}>
+        <p>⏳ Procesando tu compra...</p>
+      </div>
+    )}
+  </div>
+);}
 
 function Inicio({ setPantalla }) {
   return (
