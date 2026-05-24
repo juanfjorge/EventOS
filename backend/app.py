@@ -178,7 +178,9 @@ def crear_compra():
         msg.attach("qr_entrada.png", "image/png", buffer.getvalue())
         mail.send(msg)
     except Exception as e:
-        print("Error al enviar email:", e)
+    print("Error al enviar email:", str(e))
+    import traceback
+    traceback.print_exc()
 
     return jsonify({'mensaje': 'Compra realizada correctamente', 'qr_codigo': codigo_qr, 'compra_id': nueva_compra.id}), 201
 

@@ -20,11 +20,8 @@ function App() {
     const usuario_id = params.get("usuario_id");
     const tipo_entrada_id = params.get("tipo_entrada_id");
   
-    console.log("STATUS:", status);
-    console.log("USUARIO_ID:", usuario_id);
-    console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
-  
     if (status === "approved" && usuario_id && tipo_entrada_id) {
+      setPantalla("compra_exitosa");
       fetch(`${API}/compras`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -32,19 +29,11 @@ function App() {
       })
       .then(res => res.json())
       .then(data => {
-        console.log("COMPRA:", data);
         if (data.qr_codigo) {
           setQrFinal(data.qr_codigo);
-          setPantalla("compra_exitosa");
-        } else {
-          console.log("ERROR EN COMPRA:", data);
-          setPantalla("eventos");
         }
       })
-      .catch(err => {
-        console.log("FETCH ERROR:", err);
-        setPantalla("eventos");
-      });
+      .catch(err => console.log("Error:", err));
     }
   }, []);
   
@@ -292,7 +281,7 @@ function CompraExitosa({ qr, setPantalla }) {
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <h2>🎉 Pago exitoso!</h2>
       <p>Tu entrada fue comprada correctamente.</p>
-      <p>Te enviamos el QR a tu email.</p>
+      <p>📧 Te enviamos el QR a tu email en breve.</p>
       {qr && <QRImagen codigo={qr} />}
       <br />
       <button onClick={() => setPantalla("eventos")} style={btnStyle("#048A81")}>Volver a eventos</button>
