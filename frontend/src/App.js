@@ -288,6 +288,9 @@ function Comprar({ usuario, evento, setPantalla }) {
   if (!cargado) cargarEntradas();
 
   const pagar = async (tipo_entrada_id) => {
+    // Despertar Railway antes de ir a MercadoPago
+    await fetch(`${API}/`).catch(() => {});
+    
     const res = await fetch(`${API}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
