@@ -26,14 +26,14 @@ function App() {
     const usuario_id = params.get("usuario_id");
     const tipo_entrada_id = params.get("tipo_entrada_id");
     const evento_id = params.get("evento_id");
-
+  
     console.log("STATUS:", status);
     console.log("USUARIO_ID:", usuario_id);
     console.log("TIPO_ENTRADA_ID:", tipo_entrada_id);
-
+  
     if (status === "approved" && usuario_id && tipo_entrada_id) {
       setPantalla("compra_exitosa");
-    
+  
       fetch(`${API}/compras`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,7 +47,7 @@ function App() {
         console.log("COMPRA:", data);
         if (data.qr_codigo) {
           setQrFinal(data.qr_codigo);
-    
+  
           fetch(`${API}/eventos/${evento_id}`)
           .then(r => r.json())
           .then(eventoData => {
@@ -77,61 +77,6 @@ function App() {
         console.log("Error compra:", err.message);
         setPantalla("eventos");
       });
-    }
-
-      // Despertar y reintentar si falla
-      despertar()
-        .then(() => new Promise(resolve => setTimeout(resolve, 3000))) // esperar 3 segundos
-        .then(() => intentarCompra())
-        .then(data => {
-          console.log("COMPRA:", data);
-          if (data.qr_codigo) {
-            setQrFinal(data.qr_codigo);
-            setPantalla("compra_exitosa");
-
-            // Obtener datos del evento para el email
-            fetch(`${API}/eventos/${evento_id}`)
-            .then(r => r.json())
-            .then(eventoData => {
-              const usuarioData = JSON.parse(localStorage.getItem("usuario"));
-              emailjs.send(
-                "service_8ih75xn",
-                "template_fygfwpl",
-                {
-                  email: usuarioData.email,
-                  nombre: usuarioData.nombre,
-                  evento: eventoData.nombre,
-                  fecha: eventoData.fecha,
-                  lugar: eventoData.lugar,
-                  tipo_entrada: tipo_entrada_id,
-                  qr_codigo: data.qr_codigo
-                },
-                "T0Yu1bbO72jo4W-ve"
-              ).then(() => {
-                console.log("Email enviado correctamente");
-              }).catch(err => {
-                console.log("Error email:", err);
-              });
-            });
-          }
-        })
-        .catch(err => {
-          console.log("Error compra:", err.message);
-          // Reintentar una vez más después de 5 segundos
-          setTimeout(() => {
-            intentarCompra()
-            .then(data => {
-              if (data.qr_codigo) {
-                setQrFinal(data.qr_codigo);
-                setPantalla("compra_exitosa");
-              }
-            })
-            .catch(e => {
-              console.log("Error reintento:", e.message);
-              setPantalla("eventos");
-            });
-          }, 5000);
-        });
     }
   }, []);
 
