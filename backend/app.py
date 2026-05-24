@@ -177,10 +177,11 @@ def crear_compra():
         msg.body = f"Hola {usuario.nombre}!\n\nTu compra fue exitosa.\n\nEvento: {evento.nombre}\nFecha: {evento.fecha}\nLugar: {evento.lugar}\nTipo de entrada: {entrada.nombre}\n\nPresentá el QR adjunto en la puerta del evento.\n\nNos vemos ahí! 🎉\nEventOS"
         msg.attach("qr_entrada.png", "image/png", buffer.getvalue())
         mail.send(msg)
+        print("Email enviado correctamente")
     except Exception as e:
+        import traceback
         print("Error al enviar email:", str(e))
-    import traceback
-    traceback.print_exc()
+        traceback.print_exc()
 
     return jsonify({'mensaje': 'Compra realizada correctamente', 'qr_codigo': codigo_qr, 'compra_id': nueva_compra.id}), 201
 
