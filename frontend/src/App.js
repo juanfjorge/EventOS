@@ -477,7 +477,6 @@ function Comprar({ usuario, evento, setPantalla }) {
       )}
 
       {entradas.map(e => {
-        const vendidas = e.cupos - Math.max(0, e.cupos); // placeholder; cupos = disponibles
         return (
           <div key={e.id} className="entrada-card">
             <div className="entrada-info">
