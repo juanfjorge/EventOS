@@ -9,10 +9,10 @@ import "./App.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const API = "https://eventos-production-24eb.up.railway.app";
+const API = "http://localhost:5000"; // Cambiado temporalmente para probar en local
 
 // Mantener Railway despierto
-setInterval(() => { fetch(`${API}/`).catch(() => {}); }, 300000);
+setInterval(() => { fetch(`${API}/`).catch(() => { }); }, 300000);
 
 // ── Fuentes ─────────────────────────────────────
 const fontLink = document.createElement("link");
@@ -43,6 +43,9 @@ function Navbar({ usuario, onLogout, setPantalla }) {
       </span>
       {usuario && (
         <div className="navbar-right">
+          <button className="btn btn-primary btn-sm" onClick={() => setPantalla("mis_entradas")} style={{ marginRight: '10px' }}>
+            Mis entradas
+          </button>
           <div className="nav-user-badge">
             <div className={`nav-role-dot ${usuario.rol === "admin" ? "admin" : ""}`} />
             <strong>{usuario.nombre}</strong>
@@ -79,6 +82,8 @@ function App() {
     const evento_id = p.get("evento_id");
 
     if (st === "approved" && usuario_id && tipo_entrada_id) {
+      // Limpiar URL inmediatamente para evitar que React 18 en desarrollo ejecute esto dos veces
+      window.history.replaceState({}, "", "/");
       setPantalla("compra_exitosa");
       fetch(`${API}/compras`, {
         method: "POST",
@@ -105,13 +110,28 @@ function App() {
                     qr_codigo: data.qr_codigo,
                   },
                   "T0Yu1bbO72jo4W-ve"
-                ).catch(() => {});
+                ).catch(() => { });
               });
           }
         })
         .catch(() => setPantalla("eventos"));
     }
+
+    const handleShowLogin = () => setPantalla("login");
+    window.addEventListener('showLogin', handleShowLogin);
+    return () => window.removeEventListener('showLogin', handleShowLogin);
   }, []);
+
+  useEffect(() => {
+    const landing = document.getElementById('static-landing');
+    if (landing) {
+      if (pantalla === "inicio") {
+        landing.style.display = 'block';
+      } else {
+        landing.style.display = 'none';
+      }
+    }
+  }, [pantalla]);
 
   const irA = (destino) => {
     if (["admin", "estadisticas", "validar"].includes(destino) && usuario?.rol !== "admin") return;
@@ -131,26 +151,29 @@ function App() {
     <div className="app-shell">
       {showNav && <Navbar usuario={usuario} onLogout={logout} setPantalla={irA} />}
 
-      {pantalla === "inicio"        && <Inicio setPantalla={irA} />}
-      {pantalla === "registro"      && <Registro setPantalla={irA} />}
-      {pantalla === "login"         && <Login setPantalla={irA} setUsuario={setUsuario} />}
-      {pantalla === "eventos"       && (
+      {/* El landing estático maneja la pantalla de inicio ahora */}
+      {pantalla === "registro" && <Registro setPantalla={irA} />}
+      {pantalla === "login" && <Login setPantalla={irA} setUsuario={setUsuario} />}
+      {pantalla === "eventos" && (
         <Eventos usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
       )}
-      {pantalla === "comprar"       && (
+      {pantalla === "comprar" && (
         <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} />
       )}
-      {pantalla === "admin"         && (
+      {pantalla === "admin" && (
         <Admin usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
       )}
-      {pantalla === "estadisticas"  && (
+      {pantalla === "estadisticas" && (
         <Estadisticas evento={eventoSeleccionado} setPantalla={irA} />
       )}
-      {pantalla === "validar"       && <ValidarQR setPantalla={irA} />}
+      {pantalla === "validar" && <ValidarQR setPantalla={irA} />}
       {pantalla === "compra_exitosa" && (
         <CompraExitosa qr={qrFinal} setPantalla={irA} />
       )}
-      {pantalla === "cargando"      && (
+      {pantalla === "mis_entradas" && (
+        <MisEntradas usuario={usuario} setPantalla={irA} />
+      )}
+      {pantalla === "cargando" && (
         <div className="loading-screen">
           <div className="spinner" />
           <p style={{ color: "var(--muted)" }}>Procesando tu compra...</p>
@@ -428,7 +451,7 @@ function Comprar({ usuario, evento, setPantalla }) {
 
   const pagar = async (tipo_entrada_id) => {
     setLoadingId(tipo_entrada_id);
-    await fetch(`${API}/`).catch(() => {});
+    await fetch(`${API}/`).catch(() => { });
     const res = await fetch(`${API}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -517,8 +540,8 @@ function QRImagen({ codigo }) {
       {imagen
         ? <img src={imagen} alt="QR" style={{ width: 180, height: 180, display: "block" }} />
         : <div style={{ width: 180, height: 180, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div className="spinner" />
-          </div>
+          <div className="spinner" />
+        </div>
       }
     </div>
   );
@@ -541,12 +564,89 @@ function CompraExitosa({ qr, setPantalla }) {
 
         <div style={{ height: 24 }} />
         <button className="btn btn-primary btn-full" onClick={() => {
-          setPantalla("eventos");
+          setPantalla("mis_entradas");
           window.history.replaceState({}, "", "/");
         }}>
-          Ver más eventos →
+          Ir a mis entradas →
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── MIS ENTRADAS ────────────────────────────────
+function MisEntradas({ usuario, setPantalla }) {
+  const [compras, setCompras] = useState([]);
+  const [cargado, setCargado] = useState(false);
+
+  useEffect(() => {
+    if (usuario) {
+      fetch(`${API}/mis-entradas/${usuario.id}`)
+        .then(r => r.json())
+        .then(d => { setCompras(d); setCargado(true); })
+        .catch(() => setCargado(true));
+    }
+  }, [usuario]);
+
+  return (
+    <div className="page wide fade-up">
+      <div className="sec-header">
+        <span className="sec-tag">Tus tickets</span>
+        <h1 className="sec-title">Mis entradas 🎟️</h1>
+        <p className="sec-sub">Acá podés ver todas las entradas que compraste y sus códigos QR.</p>
+      </div>
+
+      {!cargado && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "3rem" }}>
+          <div className="spinner" />
+        </div>
+      )}
+
+      {cargado && compras.length === 0 && (
+        <div className="empty">
+          <div className="empty-icon">📭</div>
+          <p>Aún no compraste ninguna entrada.</p>
+          <button className="btn btn-primary mt-2" onClick={() => setPantalla("eventos")}>Explorar eventos</button>
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
+        {compras.map(c => (
+          <div key={c.compra_id} className="card">
+            <div style={{ height: 3, borderRadius: "3px 3px 0 0", background: "linear-gradient(90deg, var(--teal), var(--teal-light))", margin: "-1.5rem -1.5rem 1.2rem" }} />
+            <div className="card-title">{c.evento_nombre}</div>
+            <div className="card-meta">
+              <span className="card-meta-item">📅 {c.evento_fecha}</span>
+              <span className="card-meta-item">📍 {c.evento_lugar}</span>
+            </div>
+            <div style={{ margin: "1rem 0", padding: "10px", background: "var(--dark2)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                <span style={{ color: "var(--muted)" }}>Tipo:</span>
+                <strong>{c.tipo_entrada}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--muted)" }}>Estado:</span>
+                <strong style={{ color: c.qr_usado ? "var(--warning)" : "var(--teal)" }}>
+                  {c.qr_usado ? "Usada" : "Válida"}
+                </strong>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem', background: '#fff', padding: '10px', borderRadius: '8px' }}>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${c.qr_codigo}`} alt="QR" style={{ width: '150px', height: '150px' }} />
+            </div>
+            <div style={{ textAlign: "center", fontSize: "10px", color: "var(--muted)", marginTop: "10px", wordBreak: "break-all" }}>
+              {c.qr_codigo}
+            </div>
+          </div>
+        ))}
+      </div>
+      <br />
+      {compras.length > 0 && (
+        <button className="btn btn-secondary" onClick={() => setPantalla("eventos")}>
+          ← Volver a eventos
+        </button>
+      )}
     </div>
   );
 }
@@ -831,7 +931,7 @@ function ValidarQR({ setPantalla, inline = false }) {
         setScannerActivo(false);
         await validarCodigo(cod);
       },
-      () => {}
+      () => { }
     );
   };
 
