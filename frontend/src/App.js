@@ -4,7 +4,6 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale,
   BarElement, Title, Tooltip, Legend
 } from "chart.js";
-import emailjs from "@emailjs/browser";
 import "./App.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -36,9 +35,10 @@ function Navbar({ usuario, onLogout, setPantalla }) {
     <nav className="navbar">
       <span
         className="navbar-logo"
-        style={{ cursor: "pointer" }}
+        style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
         onClick={() => setPantalla(usuario ? "eventos" : "inicio")}
       >
+        <img src="/logo_e.png" alt="Logo" style={{ height: "30px", width: "30px", borderRadius: "6px" }} />
         Event<span>OS</span>
       </span>
       {usuario && (
@@ -79,7 +79,6 @@ function App() {
     const st = p.get("status");
     const usuario_id = p.get("usuario_id");
     const tipo_entrada_id = p.get("tipo_entrada_id");
-    const evento_id = p.get("evento_id");
 
     if (st === "approved" && usuario_id && tipo_entrada_id) {
       // Limpiar URL inmediatamente para evitar que React 18 en desarrollo ejecute esto dos veces
@@ -97,21 +96,6 @@ function App() {
         .then((data) => {
           if (data.qr_codigo) {
             setQrFinal(data.qr_codigo);
-            fetch(`${API}/eventos/${evento_id}`)
-              .then((r) => r.json())
-              .then((eventoData) => {
-                const u = JSON.parse(localStorage.getItem("usuario"));
-                emailjs.send(
-                  "service_8ih75xn", "template_fygfwpl",
-                  {
-                    email: u.email, nombre: u.nombre,
-                    evento: eventoData.nombre, fecha: eventoData.fecha,
-                    lugar: eventoData.lugar, tipo_entrada: tipo_entrada_id,
-                    qr_codigo: data.qr_codigo,
-                  },
-                  "T0Yu1bbO72jo4W-ve"
-                ).catch(() => { });
-              });
           }
         })
         .catch(() => setPantalla("eventos"));
@@ -146,6 +130,8 @@ function App() {
   };
 
   const showNav = !["inicio", "login", "registro"].includes(pantalla);
+
+  if (pantalla === "inicio") return null;
 
   return (
     <div className="app-shell">

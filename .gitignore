@@ -1,4 +1,10 @@
-backend/venv/
-backend/eventos.db
-backend/.env
-frontend/node_modules/
+node_modules/
+venv/
+.venv/
+.venv-1/
+__pycache__/
+*.pyc
+.env
+instance/
+*.db
+.DS_Store

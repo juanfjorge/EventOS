@@ -68,6 +68,206 @@ class Compra(db.Model):
     qr_codigo = db.Column(db.String(200), unique=True, nullable=False)
     qr_usado = db.Column(db.Boolean, default=False)
 
+def enviar_email_entrada(usuario, evento, entrada, codigo_qr):
+    import qrcode
+    qr = qrcode.make(codigo_qr)
+    buffer = io.BytesIO()
+    qr.save(buffer, format='PNG')
+    buffer.seek(0)
+
+    try:
+        msg = Message(
+            subject=f"Tu entrada para {evento.nombre} 🎉",
+            sender=os.environ.get('MAIL_USERNAME'),
+            recipients=[usuario.email]
+        )
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background-color: #0d1117;
+                    color: #e8edf5;
+                    margin: 0;
+                    padding: 0;
+                    -webkit-font-smoothing: antialiased;
+                }}
+                .email-container {{
+                    max-width: 500px;
+                    margin: 20px auto;
+                    background-color: #141c27;
+                    border: 1px solid rgba(4,138,129,0.25);
+                    border-radius: 16px;
+                    overflow: hidden;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                }}
+                .header {{
+                    text-align: center;
+                    padding: 30px 20px 20px;
+                    background: linear-gradient(180deg, rgba(4,138,129,0.1) 0%, transparent 100%);
+                }}
+                .logo-img {{
+                    width: 70px;
+                    height: 70px;
+                    border-radius: 14px;
+                    border: 1px solid rgba(4,138,129,0.3);
+                }}
+                .content {{
+                    padding: 0 30px 30px;
+                }}
+                h1 {{
+                    font-family: 'Playfair Display', Georgia, serif;
+                    font-size: 22px;
+                    font-weight: 900;
+                    margin-top: 15px;
+                    margin-bottom: 5px;
+                    color: #e8edf5;
+                    text-align: center;
+                }}
+                .subtitle {{
+                    color: #8899aa;
+                    font-size: 14px;
+                    text-align: center;
+                    margin-bottom: 25px;
+                }}
+                .ticket-details {{
+                    background-color: #1b2537;
+                    border-radius: 12px;
+                    border: 1px solid rgba(4,138,129,0.15);
+                    padding: 20px;
+                    margin-bottom: 25px;
+                }}
+                .detail-row {{
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 8px 0;
+                    border-bottom: 1px solid rgba(4,138,129,0.1);
+                    font-size: 14px;
+                }}
+                .detail-row:last-child {{
+                    border-bottom: none;
+                    padding-bottom: 0;
+                }}
+                .detail-row:first-child {{
+                    padding-top: 0;
+                }}
+                .label {{
+                    color: #8899aa;
+                }}
+                .value {{
+                    color: #e8edf5;
+                    font-weight: 600;
+                    text-align: right;
+                }}
+                .qr-container {{
+                    text-align: center;
+                    margin: 30px 0 15px;
+                }}
+                .qr-box {{
+                    background-color: white;
+                    padding: 16px;
+                    border-radius: 16px;
+                    display: inline-block;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+                }}
+                .qr-img {{
+                    width: 180px;
+                    height: 180px;
+                    display: block;
+                }}
+                .qr-instructions {{
+                    color: #8899aa;
+                    font-size: 12px;
+                    text-align: center;
+                    margin-top: 10px;
+                    line-height: 1.5;
+                }}
+                .footer {{
+                    text-align: center;
+                    padding: 20px;
+                    background-color: #0d1117;
+                    border-top: 1px solid rgba(4,138,129,0.15);
+                    font-size: 11px;
+                    color: #8899aa;
+                }}
+                .highlight {{
+                    color: #05b8ad;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    <img src="cid:logo_e" class="logo-img" alt="EventOS Logo" />
+                    <h1>¡Tu entrada está lista! 🎉</h1>
+                    <div class="subtitle">Gracias por tu compra en <span class="highlight">EventOS</span></div>
+                </div>
+                <div class="content">
+                    <div class="ticket-details">
+                        <div class="detail-row">
+                            <span class="label">Comprador</span>
+                            <span class="value">{usuario.nombre}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Evento</span>
+                            <span class="value">{evento.nombre}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Fecha</span>
+                            <span class="value">{evento.fecha}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Lugar</span>
+                            <span class="value">{evento.lugar}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Entrada</span>
+                            <span class="value">{entrada.nombre}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="qr-container">
+                        <div class="qr-box">
+                            <img src="cid:qr_entrada" class="qr-img" alt="Código QR" />
+                        </div>
+                        <div class="qr-instructions">
+                            Presentá este código QR en la puerta del evento.<br/>
+                            <strong>No es necesario imprimirlo.</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer">
+                    © 2026 EventOS. Todos los derechos reservados.<br/>
+                    Hecho con ❤️ en Mendoza, Argentina.
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg.html = html_content
+        
+        # Attach QR code inline
+        msg.attach("qr_entrada.png", "image/png", buffer.getvalue(), headers=[["Content-ID", "<qr_entrada>"], ["Content-Disposition", "inline"]])
+        
+        # Attach logo inline
+        logo_path = os.path.join(app.root_path, "logo_e.png")
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as f:
+                logo_data = f.read()
+            msg.attach("logo_e.png", "image/png", logo_data, headers=[["Content-ID", "<logo_e>"], ["Content-Disposition", "inline"]])
+            
+        mail.send(msg)
+        print("Email enviado correctamente")
+    except Exception as e:
+        import traceback
+        print("Error al enviar email:", str(e))
+        traceback.print_exc()
+
+
 # ========================
 # RUTAS
 # ========================
@@ -162,26 +362,7 @@ def crear_compra():
     db.session.add(nueva_compra)
     db.session.commit()
 
-    import qrcode
-    qr = qrcode.make(codigo_qr)
-    buffer = io.BytesIO()
-    qr.save(buffer, format='PNG')
-    buffer.seek(0)
-
-    try:
-        msg = Message(
-            subject=f"Tu entrada para {evento.nombre} 🎉",
-            sender=os.environ.get('MAIL_USERNAME'),
-            recipients=[usuario.email]
-        )
-        msg.body = f"Hola {usuario.nombre}!\n\nTu compra fue exitosa.\n\nEvento: {evento.nombre}\nFecha: {evento.fecha}\nLugar: {evento.lugar}\nTipo de entrada: {entrada.nombre}\n\nPresentá el QR adjunto en la puerta del evento.\n\nNos vemos ahí! 🎉\nEventOS"
-        msg.attach("qr_entrada.png", "image/png", buffer.getvalue())
-        mail.send(msg)
-        print("Email enviado correctamente")
-    except Exception as e:
-        import traceback
-        print("Error al enviar email:", str(e))
-        traceback.print_exc()
+    enviar_email_entrada(usuario, evento, entrada, codigo_qr)
 
     return jsonify({'mensaje': 'Compra realizada correctamente', 'qr_codigo': codigo_qr, 'compra_id': nueva_compra.id}), 201
 
@@ -297,6 +478,7 @@ def webhook():
                 usuario = Usuario.query.get(int(usuario_id))
 
                 if entrada and usuario:
+                    evento = Evento.query.get(entrada.evento_id)
                     codigo_qr = str(uuid.uuid4())
                     nueva_compra = Compra(
                         usuario_id=int(usuario_id),
@@ -308,23 +490,7 @@ def webhook():
                     db.session.add(nueva_compra)
                     db.session.commit()
 
-                    import qrcode
-                    qr = qrcode.make(codigo_qr)
-                    buffer = io.BytesIO()
-                    qr.save(buffer, format='PNG')
-                    buffer.seek(0)
-
-                    try:
-                        msg = Message(
-                            subject=f"Tu entrada para {entrada.evento.nombre} 🎉",
-                            sender=os.environ.get('MAIL_USERNAME'),
-                            recipients=[usuario.email]
-                        )
-                        msg.body = f"Hola {usuario.nombre}!\n\nTu pago fue aprobado.\n\nPresentá el QR adjunto en la puerta.\n\nEventOS"
-                        msg.attach("qr_entrada.png", "image/png", buffer.getvalue())
-                        mail.send(msg)
-                    except Exception as e:
-                        print("Error al enviar email:", e)
+                    enviar_email_entrada(usuario, evento, entrada, codigo_qr)
 
     return jsonify({'status': 'ok'}), 200
 
