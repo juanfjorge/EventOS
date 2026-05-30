@@ -4,11 +4,13 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale,
   BarElement, Title, Tooltip, Legend
 } from "chart.js";
+import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import "./App.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const API = "http://localhost:5000"; // Cambiado temporalmente para probar en local
+const API = "http://127.0.0.1:5000"; // Cambiado temporalmente para probar en local
+initMercadoPago('TEST-ea48bb24-5527-4d0c-b8e4-a1601fa7df36', { locale: 'es-AR' });
 
 // Mantener Railway despierto
 setInterval(() => { fetch(`${API}/`).catch(() => { }); }, 300000);
@@ -144,7 +146,7 @@ function App() {
         <Eventos usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
       )}
       {pantalla === "comprar" && (
-        <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} />
+        <Comprar usuario={usuario} evento={eventoSeleccionado} setPantalla={irA} setQrFinal={setQrFinal} />
       )}
       {pantalla === "admin" && (
         <Admin usuario={usuario} setPantalla={irA} setEventoSeleccionado={setEventoSeleccionado} />
@@ -154,7 +156,7 @@ function App() {
       )}
       {pantalla === "validar" && <ValidarQR setPantalla={irA} />}
       {pantalla === "compra_exitosa" && (
-        <CompraExitosa qr={qrFinal} setPantalla={irA} />
+        <CompraExitosa qrs={qrFinal} setPantalla={irA} />
       )}
       {pantalla === "mis_entradas" && (
         <MisEntradas usuario={usuario} setPantalla={irA} />
@@ -423,38 +425,81 @@ function Eventos({ usuario, setPantalla, setEventoSeleccionado }) {
 }
 
 // ── COMPRAR ───────────────────────────────────────
-function Comprar({ usuario, evento, setPantalla }) {
+function Comprar({ usuario, evento, setPantalla, setQrFinal }) {
   const [entradas, setEntradas] = useState([]);
   const [cargado, setCargado] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [loadingId, setLoadingId] = useState(null);
+  const [entradaSeleccionada, setEntradaSeleccionada] = useState(false);
+  const [carrito, setCarrito] = useState({});
 
   useEffect(() => {
-    fetch(`${API}/entradas/${evento.id}`)
-      .then(r => r.json())
-      .then(d => { setEntradas(d); setCargado(true); });
+    fetch(`${API}/entradas/${evento.id}?t=${new Date().getTime()}`)
+      .then(res => res.json())
+      .then(data => { setEntradas(data); setCargado(true); });
   }, [evento.id]);
 
-  const pagar = async (tipo_entrada_id) => {
-    setLoadingId(tipo_entrada_id);
-    await fetch(`${API}/`).catch(() => { });
-    const res = await fetch(`${API}/crear-pago`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo_entrada_id, usuario_id: usuario.id }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      window.location.href = data.init_point;
-    } else {
-      setMensaje("❌ Error al procesar el pago");
-      setLoadingId(null);
+  const totalCarrito = entradas.reduce((sum, e) => sum + (e.precio * (carrito[e.id] || 0)), 0);
+  const totalEntradas = Object.values(carrito).reduce((sum, val) => sum + val, 0);
+
+  const irAPagar = () => {
+    if (totalEntradas > 0) {
+      setEntradaSeleccionada(true);
+      setMensaje("");
     }
+  };
+
+  const updateCarrito = (id, delta, cupos) => {
+    setCarrito(prev => {
+      const actual = prev[id] || 0;
+      const nuevo = Math.max(0, Math.min(actual + delta, cupos));
+      const newState = { ...prev };
+      if (nuevo === 0) delete newState[id];
+      else newState[id] = nuevo;
+      return newState;
+    });
+  };
+
+  const procesarPagoBrick = async (param) => {
+    return new Promise((resolve, reject) => {
+      const carritoArray = Object.keys(carrito).map(id => ({
+        tipo_entrada_id: parseInt(id),
+        cantidad: carrito[id]
+      }));
+      fetch(`${API}/procesar-pago-brick`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...param,
+          carrito: carritoArray,
+          usuario_id: usuario.id
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status === "approved") {
+            setQrFinal(data.qr_codigos);
+            setPantalla("compra_exitosa");
+            window.history.replaceState({}, "", "/");
+            resolve();
+          } else {
+            setMensaje(`❌ Pago rechazado o pendiente: ${data.message || 'Intente otro medio de pago'}`);
+            reject();
+          }
+        })
+        .catch((error) => {
+          setMensaje("❌ Error de red al procesar el pago");
+          reject();
+        });
+    });
   };
 
   return (
     <div className="page fade-up">
-      <button className="btn btn-secondary btn-sm" onClick={() => setPantalla("eventos")}
+      <button className="btn btn-secondary btn-sm" onClick={() => {
+        if (entradaSeleccionada) setEntradaSeleccionada(null);
+        else setPantalla("eventos");
+      }}
         style={{ marginBottom: "1.5rem" }}>
         ← Volver
       </button>
@@ -485,27 +530,68 @@ function Comprar({ usuario, evento, setPantalla }) {
         <div className="empty"><div className="empty-icon">🎫</div><p>No hay entradas disponibles.</p></div>
       )}
 
-      {entradas.map(e => {
-        return (
-          <div key={e.id} className="entrada-card">
-            <div className="entrada-info">
-              <div className="entrada-nombre">{e.nombre}</div>
-              <div className="entrada-precio">${e.precio.toLocaleString("es-AR")}</div>
-              <div className="entrada-cupos">🎟️ {e.cupos} cupos disponibles</div>
-              <div className="cupos-bar">
-                <div className="cupos-fill" style={{ width: "60%" }} />
+      {!entradaSeleccionada ? (
+        <>
+          {entradas.map(e => (
+            <div key={e.id} className="entrada-card">
+              <div className="entrada-info">
+                <div className="entrada-nombre">{e.nombre}</div>
+                <div className="entrada-precio">${e.precio.toLocaleString("es-AR")}</div>
+                <div className="entrada-cupos">🎟️ {e.cupos} cupos disponibles</div>
+                <div className="cupos-bar">
+                  <div className="cupos-fill" style={{ width: "60%" }} />
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => updateCarrito(e.id, -1, e.cupos)}
+                  disabled={!(carrito[e.id] > 0)}
+                >-</button>
+                <span style={{ minWidth: "20px", textAlign: "center" }}>{carrito[e.id] || 0}</span>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => updateCarrito(e.id, 1, e.cupos)}
+                  disabled={(carrito[e.id] || 0) >= e.cupos}
+                >+</button>
               </div>
             </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => pagar(e.id)}
-              disabled={loadingId === e.id || e.cupos === 0}
-            >
-              {loadingId === e.id ? "Redirigiendo..." : e.cupos === 0 ? "Agotado" : "💳 Comprar"}
-            </button>
-          </div>
-        );
-      })}
+          ))}
+          {totalEntradas > 0 && (
+            <div className="card" style={{ marginTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "600" }}>Total: ${totalCarrito.toLocaleString("es-AR")}</div>
+                <div style={{ fontSize: "0.9rem", color: "var(--muted)" }}>{totalEntradas} entrada{totalEntradas > 1 ? 's' : ''} en el carrito</div>
+              </div>
+              <button className="btn btn-primary" onClick={irAPagar}>💳 Ir a pagar</button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="card" style={{ marginTop: "1rem" }}>
+          <h3 style={{ marginBottom: "1rem" }}>Pago Total: ${totalCarrito.toLocaleString("es-AR")}</h3>
+          <Payment
+            initialization={{ amount: totalCarrito }}
+            customization={{
+              paymentMethods: {
+                ticket: "all",
+                creditCard: "all",
+                debitCard: "all",
+                mercadoPago: "all",
+              },
+            }}
+            onSubmit={async (param) => {
+              console.log("Payment Brick Param:", param);
+              const dataToSend = param.formData ? param.formData : param;
+              await procesarPagoBrick(dataToSend);
+            }}
+            onError={(error) => {
+              console.error(error);
+              setMensaje("❌ Error en el formulario de pago");
+            }}
+          />
+        </div>
+      )}
 
       <Msg text={mensaje} />
     </div>
@@ -533,7 +619,7 @@ function QRImagen({ codigo }) {
   );
 }
 
-function CompraExitosa({ qr, setPantalla }) {
+function CompraExitosa({ qrs, setPantalla }) {
   return (
     <div className="page fade-up">
       <div className="qr-success-page">
@@ -542,11 +628,18 @@ function CompraExitosa({ qr, setPantalla }) {
           ¡Pago exitoso!
         </h1>
         <p style={{ color: "var(--muted)", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-          Tu entrada fue confirmada. Te enviamos el QR a tu email.
+          Tu compra fue confirmada. Te enviamos los códigos QR a tu email.
         </p>
 
-        {qr && <QRImagen codigo={qr} />}
-        {qr && <p className="qr-code-text">{qr}</p>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
+          {qrs && qrs.map((codigo, idx) => (
+            <div key={idx} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px' }}>
+              <p style={{ marginBottom: '10px', fontWeight: 'bold' }}>Entrada {idx + 1}</p>
+              <QRImagen codigo={codigo} />
+              <p className="qr-code-text" style={{ marginTop: '10px' }}>{codigo}</p>
+            </div>
+          ))}
+        </div>
 
         <div style={{ height: 24 }} />
         <button className="btn btn-primary btn-full" onClick={() => {
